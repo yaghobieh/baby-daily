@@ -20,7 +20,7 @@ export default async function sharingRoutes(app: FastifyInstance) {
     return prisma.invitation.findMany({ where: { babyId, status: 'PENDING' }, orderBy: { createdAt: 'desc' } });
   });
 
-  app.post('/babies/:babyId/invitations', async (req, reply) => {
+  const inviteHandler = async (req: any, reply: any) => {
     const { babyId } = BabyParams.parse(req.params);
     await requireMember(babyId, uid(req), 'OWNER');
     const b = InviteBody.parse(req.body);
@@ -97,7 +97,10 @@ export default async function sharingRoutes(app: FastifyInstance) {
       memberAdded: true,
       message: `${target.name} נוסף/ה בהצלחה ויקבל/י התראות!`,
     });
-  });
+  };
+
+  app.post('/babies/:babyId/invitations', inviteHandler);
+  app.post('/babies/:babyId/invite', inviteHandler);
 
   app.delete('/invitations/:id', async (req, reply) => {
     const { id } = IdParams.parse(req.params);
