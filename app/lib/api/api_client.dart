@@ -15,14 +15,24 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
+  /// Production API (Vercel). Override with: --dart-define=API_URL=https://...
+  static const String prodUrl = String.fromEnvironment('API_URL', defaultValue: 'https://baby-daily-api.vercel.app');
+
+  /// Local API used while developing (debug / profile builds).
+  static const String localUrl = 'http://localhost:5050';
+
+  /// Release builds talk to Vercel; debug builds talk to the local backend.
+  /// When the debug web app is opened from another device (e.g. an iPhone on the
+  /// same Wi-Fi) the local backend is reached through the same host as the page.
   static String get defaultUrl {
+    if (kReleaseMode) return prodUrl;
     if (kIsWeb) {
       final host = Uri.base.host;
       if (host.isNotEmpty && host != 'localhost' && host != '127.0.0.1') {
         return 'http://$host:5050';
       }
     }
-    return 'http://localhost:5050';
+    return localUrl;
   }
 
   static const String _tokenKey = 'auth_token';
@@ -38,16 +48,8 @@ class ApiClient {
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString(_tokenKey);
-    final saved = prefs.getString(_urlKey);
-    if (saved != null && saved.isNotEmpty) {
-      if (kIsWeb && Uri.base.host.isNotEmpty && Uri.base.host != 'localhost' && saved.contains('localhost')) {
-        _baseUrl = defaultUrl;
-      } else {
-        _baseUrl = saved;
-      }
-    } else {
-      _baseUrl = defaultUrl;
-    }
+    _baseUrl = defaultUrl;
+    await prefs.remove(_urlKey); // legacy: URL used to be editable in Settings
   }
 
   Future<void> setBaseUrl(String url) async {

@@ -79,10 +79,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: isUnread ? AppTheme.primaryLight.withValues(alpha: 0.4) : Colors.white,
+                        color: isUnread
+                            ? AppTheme.primaryLight.withValues(alpha: 0.4)
+                            : AppTheme.card(context),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isUnread ? AppTheme.primary.withValues(alpha: 0.3) : AppTheme.divider,
+                          color: isUnread ? AppTheme.primary : AppTheme.line(context),
+                          width: isUnread ? 1.5 : 1,
                         ),
                       ),
                       child: Row(
@@ -116,6 +119,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                         style: TextStyle(
                                           fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
                                           fontSize: 14,
+                                          color: AppTheme.ink(context),
                                         ),
                                       ),
                                     ),

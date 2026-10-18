@@ -158,9 +158,9 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
               label: Text(t['label']!),
               selected: isSelected,
               selectedColor: AppTheme.primaryLight,
-              backgroundColor: const Color(0xFFF1F3F6),
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               labelStyle: TextStyle(
-                color: isSelected ? AppTheme.primaryDark : AppTheme.textMain,
+                color: isSelected ? AppTheme.primaryDark : AppTheme.ink(context),
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
               side: BorderSide(
@@ -252,7 +252,7 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
             width: 140,
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
             decoration: BoxDecoration(
-              color: isSelected ? AppTheme.lavenderLight : const Color(0xFFF4F6F9),
+              color: isSelected ? AppTheme.lavenderLight : Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isSelected ? AppTheme.lavender : Colors.transparent,
@@ -268,7 +268,7 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
                   k['label']!,
                   style: TextStyle(
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    color: isSelected ? AppTheme.lavender : AppTheme.textMain,
+                    color: isSelected ? AppTheme.lavender : AppTheme.ink(context),
                   ),
                 ),
               ],
@@ -389,9 +389,9 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
     final s = context.watch<LocaleState>().strings;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: AppTheme.card(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: EdgeInsets.only(
         top: 20,

@@ -7,7 +7,6 @@ import { BabyParams, DeviceBody, IdParams, PhotoBody, ReminderBody, TestNotifyBo
 import { computeNextAt } from '../services/scheduler.js';
 import { normalizePhone, phoneKey } from '../lib/contact.js';
 import { notifyUser } from '../services/notify.js';
-import { sendRealSms, type SmsSendResult } from '../services/sms.js';
 import { z } from 'zod';
 
 const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
@@ -146,12 +145,7 @@ export default async function miscRoutes(app: FastifyInstance) {
     const whatsappUrl = waDigits ? `https://wa.me/${waDigits}?text=${encodedText}` : `https://wa.me/?text=${encodedText}`;
     const telegramUrl = `https://t.me/share/url?text=${encodedText}`;
 
-    let smsResult: SmsSendResult | null = null;
-    if (targetPhone) {
-      smsResult = await sendRealSms(targetPhone, `${title}\n${body}`);
-    }
-
-    req.log.info(`[TEST NOTIFICATION SENT via ${b.channel}]: Phone: ${targetPhone || 'in-app'}, SMS provider: ${smsResult?.provider || 'none'}, WhatsApp: ${whatsappUrl}, Telegram: ${telegramUrl}`);
+    req.log.info(`[TEST NOTIFICATION SENT via ${b.channel}]: Phone: ${targetPhone || 'in-app'}, WhatsApp: ${whatsappUrl}, Telegram: ${telegramUrl}`);
 
     return {
       ok: true,
@@ -162,16 +156,7 @@ export default async function miscRoutes(app: FastifyInstance) {
       body,
       whatsappUrl,
       telegramUrl,
-      delivered: {
-        push: !!targetUserId,
-        sms: smsResult?.sent ?? false,
-        whatsapp: true,
-        telegram: true,
-      },
-      smsStatus: smsResult,
-      smsNotice: smsResult?.sent
-        ? 'Real SMS sent to your mobile carrier via Twilio'
-        : 'Notice: Real cellular SMS to physical SIMs requires a cellular SMS provider (e.g. Twilio). Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER in backend/.env. For 100% free instant delivery to your phone right now, tap the WhatsApp button!',
+      delivered: { push: !!targetUserId, whatsapp: true, telegram: true },
     };
   });
 

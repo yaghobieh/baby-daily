@@ -51,9 +51,9 @@ class _RemindersScreenState extends State<RemindersScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: AppTheme.card(ctx),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: EdgeInsets.only(
             top: 24,
@@ -246,9 +246,9 @@ class _RemindersScreenState extends State<RemindersScreen> {
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppTheme.card(context),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppTheme.divider),
+                        border: Border.all(color: AppTheme.line(context)),
                       ),
                       child: Row(
                         children: [
@@ -272,7 +272,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                               children: [
                                 Text(
                                   r.title,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.ink(context)),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -283,7 +283,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                             ),
                           ),
                           IconButton(
-                            icon: Icon(Icons.delete_outline, size: 20, color: Colors.red.shade400),
+                            icon: Icon(Icons.delete_outline, size: 20, color: AppTheme.danger),
                             tooltip: s.delete,
                             onPressed: () async {
                               final confirmed = await showDialog<bool>(
@@ -310,7 +310,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(s.reminderDeletedSuccess),
-                                      backgroundColor: Colors.green.shade700,
+                                      backgroundColor: AppTheme.mint,
                                     ),
                                   );
                                 }

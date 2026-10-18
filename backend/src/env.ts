@@ -9,6 +9,13 @@ const EnvSchema = z.object({
   CORS_ORIGINS: z.string().default('*'),
   FIREBASE_SERVICE_ACCOUNT_BASE64: z.string().optional().default(''),
   NODE_ENV: z.string().default('development'),
+  /** Public URL of the web app (used in invitation emails). */
+  APP_URL: z.string().default('http://localhost:8080'),
+  /** Resend (https://resend.com) API key for transactional email. Without it emails are only logged. */
+  RESEND_API_KEY: z.string().optional().default(''),
+  EMAIL_FROM: z.string().default('BabyDaily <onboarding@resend.dev>'),
+  /** Shared secret for the Vercel cron endpoint. */
+  CRON_SECRET: z.string().optional().default(''),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

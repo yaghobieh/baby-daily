@@ -41,6 +41,20 @@
 
 ---
 
+
+## 🎨 2026 Modern Redesign & UI System
+- **Color System**: Curated Nunito soft-tint palette (Primary Coral , Feeding Amber , Sleep Mint , Diaper Lavender , Medicine Rose , Growth Sky , Note Teal ).
+- **Dark Mode**: Full dark theme with 🌓 toggle, mode-aware card surfaces, and low-contrast palettes designed for midnight feedings.
+- **Recent Activity Filters**: Instant interactive filter chips (All, Feeding, Sleep, Diaper, Medicine, Growth, Note).
+- **Settings & Channels**: Dedicated WhatsApp and Telegram toggles with SMS deactivated in favor of responsive branded email templates.
+- **Store Graphics**: High-res icons (1024x1024), Play Store feature graphics (1024x500), and banner assets located in `branding/`.
+- **Store Listing & Release**: See [STORE_LISTING.md](STORE_LISTING.md) and [RELEASE.md](RELEASE.md).
+
+## 🚀 Vercel Deployment
+The backend Fastify server is configured as a Vercel Serverless Function (`backend/vercel.json`).
+- Production API URL defaults to `https://baby-daily-api.vercel.app` (or `--dart-define=API_URL=...`).
+- Debug builds automatically fallback to local backend on `http://localhost:5050` or `http://<host>:5050` over Wi-Fi.
+
 ## 🗄️ Database (Neon PostgreSQL)
 
 Connected to your Neon Postgres database:

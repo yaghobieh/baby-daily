@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../state/auth_state.dart';
 import '../../state/locale_state.dart';
 import '../../theme/app_theme.dart';
-import '../../api/api_client.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -47,63 +46,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _showServerDialog() async {
-    final api = context.read<ApiClient>();
-    final s = context.read<LocaleState>().strings;
-    final controller = TextEditingController(text: api.baseUrl);
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.dns_outlined, color: AppTheme.sky, size: 22),
-            const SizedBox(width: 8),
-            Text(s.serverUrl, style: const TextStyle(fontSize: 16)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              s.isHe
-                  ? 'כתובת שרת ה-API. בחיבור ממכשיר נייד הזן: http://10.0.0.34:5050'
-                  : 'API Server URL. For iPhone on Wi-Fi use: http://10.0.0.34:5050',
-              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                hintText: 'http://10.0.0.34:5050',
-                isDense: true,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(s.cancel),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await api.setBaseUrl(controller.text.trim());
-              if (ctx.mounted) Navigator.pop(ctx);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(s.serverUrlUpdated)),
-                );
-              }
-            },
-            child: Text(s.save),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final s = context.watch<LocaleState>().strings;
@@ -113,11 +55,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       appBar: AppBar(
         actions: [
-          IconButton(
-            icon: const Icon(Icons.dns_outlined, size: 20),
-            tooltip: s.serverUrl,
-            onPressed: _showServerDialog,
-          ),
           TextButton.icon(
             onPressed: () => localeState.toggle(),
             icon: const Icon(Icons.language, size: 18),

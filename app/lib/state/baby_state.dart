@@ -115,24 +115,27 @@ class BabyState extends ChangeNotifier {
     }
   }
 
-  Future<bool> inviteMember({
+  Future<Map<String, dynamic>?> inviteMember({
     String? email,
     String? phone,
     String role = 'CAREGIVER',
   }) async {
-    if (_currentBaby == null) return false;
+    if (_currentBaby == null) return null;
     try {
-      await api.post('/babies/${_currentBaby!.id}/invitations', {
+      final res = await api.post('/babies/${_currentBaby!.id}/invitations', {
         if (email?.isNotEmpty == true) 'email': email,
         if (phone?.isNotEmpty == true) 'phone': phone,
         'role': role,
       });
       await loadBabyDetails();
-      return true;
+      if (res is Map<String, dynamic>) {
+        return res;
+      }
+      return {'success': true};
     } catch (e) {
       _error = e.toString();
       notifyListeners();
-      return false;
+      return null;
     }
   }
 

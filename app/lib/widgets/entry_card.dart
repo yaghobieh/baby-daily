@@ -4,6 +4,7 @@ import '../models/entry.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 
+/// Recent-activity row: soft colored icon tile, title, author, time and a delete button.
 class EntryCard extends StatelessWidget {
   final EntryModel entry;
   final AppStrings strings;
@@ -15,42 +16,6 @@ class EntryCard extends StatelessWidget {
     required this.strings,
     this.onDelete,
   });
-
-  String _typeEmoji(String type) {
-    switch (type) {
-      case 'FEED':
-        return '🍼';
-      case 'SLEEP':
-        return '😴';
-      case 'DIAPER':
-        return '🧷';
-      case 'GROWTH':
-        return '📏';
-      case 'MEDICINE':
-        return '💊';
-      case 'NOTE':
-        return '📝';
-      default:
-        return '✨';
-    }
-  }
-
-  Color _typeColor(String type) {
-    switch (type) {
-      case 'FEED':
-        return AppTheme.sun;
-      case 'SLEEP':
-        return AppTheme.mint;
-      case 'DIAPER':
-        return AppTheme.lavender;
-      case 'GROWTH':
-        return AppTheme.sky;
-      case 'MEDICINE':
-        return AppTheme.primary;
-      default:
-        return Colors.teal;
-    }
-  }
 
   String _formatDetails() {
     final d = entry.data;
@@ -121,95 +86,81 @@ class EntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _typeColor(entry.type);
-    final emoji = _typeEmoji(entry.type);
+    final act = AppTheme.act(entry.type);
+    final dark = AppTheme.isDark(context);
     final timeStr = DateFormat.jm().format(entry.startedAt.toLocal());
     final details = _formatDetails();
+    final title = details.isEmpty ? _label() : details;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.divider),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: AppTheme.card(context),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.line(context)),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(color: act.soft(dark), borderRadius: BorderRadius.circular(14)),
             alignment: Alignment.center,
-            child: Text(emoji, style: const TextStyle(fontSize: 22)),
+            child: Text(act.emoji, style: const TextStyle(fontSize: 20)),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      details,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textMain,
-                      ),
-                    ),
-                    Text(
-                      timeStr,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.ink(context)),
                 ),
-                if (entry.note != null && entry.note!.isNotEmpty && entry.type != 'NOTE') ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    entry.note!,
-                    style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                if (entry.note != null && entry.note!.isNotEmpty && entry.type != 'NOTE')
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(entry.note!, style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
                   ),
-                ],
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.person_outline, size: 13, color: Colors.grey.shade500),
-                    const SizedBox(width: 4),
-                    Text(
-                      entry.authorName ?? (strings.isHe ? 'מטפל/ת' : 'Caregiver'),
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                    ),
-                  ],
+                const SizedBox(height: 2),
+                Text(
+                  entry.authorName ?? (strings.isHe ? 'מטפל/ת' : 'Caregiver'),
+                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
+          Text(timeStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textMuted)),
           if (onDelete != null)
             IconButton(
-              icon: Icon(Icons.delete_outline, size: 20, color: Colors.red.shade400),
+              icon: const Text('🗑', style: TextStyle(fontSize: 18)),
               onPressed: onDelete,
               tooltip: strings.delete,
-              splashRadius: 18,
+              visualDensity: VisualDensity.compact,
             ),
         ],
       ),
     );
+  }
+
+  String _label() {
+    switch (entry.type) {
+      case 'FEED':
+        return strings.feed;
+      case 'SLEEP':
+        return strings.sleep;
+      case 'DIAPER':
+        return strings.diaper;
+      case 'GROWTH':
+        return strings.growth;
+      case 'MEDICINE':
+        return strings.medicine;
+      default:
+        return strings.note;
+    }
   }
 }

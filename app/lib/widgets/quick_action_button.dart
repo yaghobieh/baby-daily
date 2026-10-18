@@ -1,53 +1,39 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
+/// Quick action tile (emoji + label) tinted with the activity's own color.
 class QuickActionButton extends StatelessWidget {
+  final String type;
   final String label;
-  final String emoji;
-  final Color color;
-  final Color bgColor;
   final VoidCallback onTap;
 
   const QuickActionButton({
     super.key,
+    required this.type,
     required this.label,
-    required this.emoji,
-    required this.color,
-    required this.bgColor,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
+    final act = AppTheme.act(type);
+    final dark = AppTheme.isDark(context);
+    return Material(
+      color: act.soft(dark),
       borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              emoji,
-              style: const TextStyle(fontSize: 28),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-            ),
-          ],
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(act.emoji, style: const TextStyle(fontSize: 28)),
+              const SizedBox(height: 6),
+              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: act.strong)),
+            ],
+          ),
         ),
       ),
     );

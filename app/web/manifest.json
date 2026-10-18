@@ -1,11 +1,11 @@
 {
-    "name": "baby_daily",
-    "short_name": "baby_daily",
+    "name": "BabyDaily - Feeding, Sleep & Diapers",
+    "short_name": "BabyDaily",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFF9F4",
+    "theme_color": "#FF7A59",
+    "description": "Shared baby tracker for feedings, naps, diapers, medicine, and milestones with family and caregivers.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
