@@ -8,6 +8,7 @@ import { publicUserSelect, uid } from '../lib/http.js';
 import { t } from '../lib/i18n.js';
 import { BabyParams, IdParams, InviteBody, MemberParams, MemberPatchBody, SettingsBody } from '../schemas.js';
 import { notifyUser } from '../services/notify.js';
+import { sendRealSms } from '../services/sms.js';
 
 /** Sharing: invitations by email/phone, members & roles, per-member notification settings. */
 export default async function sharingRoutes(app: FastifyInstance) {
@@ -98,7 +99,8 @@ export default async function sharingRoutes(app: FastifyInstance) {
 
     // 2. Send Simulated SMS
     if (targetPhone) {
-      req.log.info(`[INVITATION SMS SENT to ${targetPhone}]: בייבי דיילי: היי! ${me.name} הוסיף/ה אותך למעקב אחרי ${baby.name}. מעכשיו תקבל/י התראות שגרה (האכלה, שינה, חיתולים) בזמן אמת.`);
+      void sendRealSms(targetPhone, `בייבי דיילי: היי! ${me.name} הוסיף/ה אותך למעקב אחרי ${baby.name}. מעכשיו תקבל/י התראות שגרה (האכלה, שינה, חיתולים) בזמן אמת.`);
+    req.log.info(`[INVITATION SMS SENT to ${targetPhone}]: בייבי דיילי: היי! ${me.name} הוסיף/ה אותך למעקב אחרי ${baby.name}. מעכשיו תקבל/י התראות שגרה (האכלה, שינה, חיתולים) בזמן אמת.`);
     }
 
     const shareMsg = encodeURIComponent(`🍼 *בייבי דיילי - הזמנה למעקב אחרי ${baby.name}*\nהיי! ${me.name} הזמין/ה אותך להצטרף כ-${roleHebrew} ללוח המעקב של ${baby.name}.\nהצטרפ/י כאן: http://localhost:5050`);
