@@ -1,0 +1,207 @@
+// BabyDaily data model.
+// Conventions: camelCase fields, PascalCase models, ids are cuid strings,
+// every timestamp is stored in UTC. See /AGENTS.md for rules.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  OWNER // full control: edit baby, manage members, delete
+  CAREGIVER // can log / edit entries
+  VIEWER // read-only follower
+}
+
+enum EntryType {
+  FEED
+  SLEEP
+  DIAPER
+  GROWTH
+  MEDICINE
+  NOTE
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+}
+
+enum ReminderKind {
+  AFTER_LAST // fire N minutes after the last entry of a given type
+  DAILY_AT // fire every day at a local time
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  phone        String?
+  /// Last 9 digits of phone – used to match invites regardless of country-code format.
+  phoneKey     String?  @unique
+  name         String
+  passwordHash String
+  locale       String   @default("en")
+  /// Minutes offset from UTC reported by the user's device (for quiet hours).
+  utcOffset    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships   BabyMember[]
+  devices       DeviceToken[]
+  notifications Notification[]
+  entries       Entry[]        @relation("EntryAuthor")
+  invitesSent   Invitation[]   @relation("InviteSender")
+  reminders     Reminder[]
+}
+
+model Baby {
+  id          String    @id @default(cuid())
+  name        String
+  birthDate   DateTime?
+  gender      String? // "girl" | "boy" | null
+  avatarColor String    @default("#F7A8C4")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  members     BabyMember[]
+  entries     Entry[]
+  invitations Invitation[]
+  reminders   Reminder[]
+  photos      Photo[]
+}
+
+model BabyMember {
+  id            String      @id @default(cuid())
+  babyId        String
+  userId        String
+  role          Role        @default(CAREGIVER)
+  /// Master switch for push/in-app notifications about this baby.
+  notifyEnabled Boolean     @default(true)
+  /// Which entry types this member wants to be notified about.
+  notifyTypes   EntryType[] @default([FEED, SLEEP, DIAPER, GROWTH, MEDICINE, NOTE])
+  /// Quiet hours in local minutes from midnight (0..1439). Null = disabled.
+  quietStart    Int?
+  quietEnd      Int?
+  createdAt     DateTime    @default(now())
+
+  baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([babyId, userId])
+  @@index([userId])
+}
+
+model Invitation {
+  id          String       @id @default(cuid())
+  babyId      String
+  invitedById String
+  email       String?
+  phone       String?
+  phoneKey    String?
+  role        Role         @default(CAREGIVER)
+  status      InviteStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  respondedAt DateTime?
+
+  baby      Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  invitedBy User @relation("InviteSender", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([email, status])
+  @@index([phoneKey, status])
+  @@index([babyId])
+}
+
+model Entry {
+  id          String    @id @default(cuid())
+  babyId      String
+  createdById String
+  type        EntryType
+  startedAt   DateTime
+  endedAt     DateTime?
+  /// Type-specific payload, validated in src/schemas/entries.ts
+  data        Json      @default("{}")
+  note        String?
+  photoId     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  baby      Baby   @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  createdBy User   @relation("EntryAuthor", fields: [createdById], references: [id], onDelete: Cascade)
+  photo     Photo? @relation(fields: [photoId], references: [id], onDelete: SetNull)
+
+  @@index([babyId, startedAt])
+  @@index([babyId, type, startedAt])
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  babyId    String
+  mime      String
+  bytes     Bytes
+  createdAt DateTime @default(now())
+
+  baby    Baby    @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  entries Entry[]
+
+  @@index([babyId])
+}
+
+model Reminder {
+  id              String       @id @default(cuid())
+  babyId          String
+  userId          String
+  kind            ReminderKind
+  title           String
+  /// AFTER_LAST: entry type to watch
+  entryType       EntryType?
+  /// AFTER_LAST: minutes after last entry
+  intervalMinutes Int?
+  /// DAILY_AT: local minutes from midnight
+  timeOfDay       Int?
+  utcOffset       Int          @default(0)
+  enabled         Boolean      @default(true)
+  nextAt          DateTime?
+  lastFiredAt     DateTime?
+  createdAt       DateTime     @default(now())
+
+  baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([enabled, nextAt])
+  @@index([babyId, entryType])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  babyId    String?
+  title     String
+  body      String
+  data      Json      @default("{}")
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model DeviceToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String // "android" | "ios" | "web"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
