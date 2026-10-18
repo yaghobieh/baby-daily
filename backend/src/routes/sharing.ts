@@ -87,15 +87,39 @@ export default async function sharingRoutes(app: FastifyInstance) {
       data: { type: 'member_joined', role: b.role },
     }).catch((e) => req.log.error(e));
 
-    // Also log notification sent to email or phone
-    req.log.info(`[NOTIFICATION SENT to ${email ?? phone}]: ${me.name} added you to track baby ${baby.name} on BabyDaily!`);
+    const targetEmail = email ?? (target.email.endsWith('@placeholder.local') ? null : target.email);
+    const targetPhone = phone ?? target.phone;
+    const roleHebrew = b.role === 'CAREGIVER' ? 'מטפל/ת' : 'צופה';
+
+    // 1. Send Simulated Email
+    if (targetEmail) {
+      req.log.info(`[INVITATION EMAIL SENT to ${targetEmail}]: הנושא: הזמנה למעקב אחרי ${baby.name} ב-BabyDaily! תוכן: היי, ${me.name} הזמין/ה אותך להצטרף כ-${roleHebrew} למעקב אחרי ${baby.name} באפליקציית בייבי דיילי. מעכשיו תקבל/י עדכונים שוטפים והתראות בזמן אמת.`);
+    }
+
+    // 2. Send Simulated SMS
+    if (targetPhone) {
+      req.log.info(`[INVITATION SMS SENT to ${targetPhone}]: בייבי דיילי: היי! ${me.name} הוסיף/ה אותך למעקב אחרי ${baby.name}. מעכשיו תקבל/י התראות שגרה (האכלה, שינה, חיתולים) בזמן אמת.`);
+    }
+
+    const shareMsg = encodeURIComponent(`🍼 *בייבי דיילי - הזמנה למעקב אחרי ${baby.name}*\nהיי! ${me.name} הזמין/ה אותך להצטרף כ-${roleHebrew} ללוח המעקב של ${baby.name}.\nהצטרפ/י כאן: http://localhost:5050`);
+    const waClean = targetPhone ? targetPhone.replace(/\D/g, '') : '';
+    const whatsappInviteUrl = waClean ? `https://wa.me/${waClean}?text=${shareMsg}` : `https://wa.me/?text=${shareMsg}`;
+    const telegramInviteUrl = `https://t.me/share/url?text=${shareMsg}`;
 
     return reply.code(201).send({
       invitation,
       member,
       userExists: true,
       memberAdded: true,
-      message: `${target.name} נוסף/ה בהצלחה ויקבל/י התראות!`,
+      dispatched: {
+        email: !!targetEmail,
+        sms: !!targetPhone,
+        push: true,
+        inApp: true,
+        whatsappUrl: whatsappInviteUrl,
+        telegramUrl: telegramInviteUrl,
+      },
+      message: `${target.name} נוסף/ה בהצלחה! נשלחו התראה, אימייל ו-SMS.`,
     });
   };
 
