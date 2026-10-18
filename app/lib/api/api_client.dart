@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,11 +15,20 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
-  static const String _defaultUrl = 'http://localhost:5050';
+  static String get defaultUrl {
+    if (kIsWeb) {
+      final host = Uri.base.host;
+      if (host.isNotEmpty && host != 'localhost' && host != '127.0.0.1') {
+        return 'http://$host:5050';
+      }
+    }
+    return 'http://localhost:5050';
+  }
+
   static const String _tokenKey = 'auth_token';
   static const String _urlKey = 'api_base_url';
 
-  String _baseUrl = _defaultUrl;
+  String _baseUrl = defaultUrl;
   String? _token;
 
   String get baseUrl => _baseUrl;
@@ -28,7 +38,16 @@ class ApiClient {
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString(_tokenKey);
-    _baseUrl = prefs.getString(_urlKey) ?? _defaultUrl;
+    final saved = prefs.getString(_urlKey);
+    if (saved != null && saved.isNotEmpty) {
+      if (kIsWeb && Uri.base.host.isNotEmpty && Uri.base.host != 'localhost' && saved.contains('localhost')) {
+        _baseUrl = defaultUrl;
+      } else {
+        _baseUrl = saved;
+      }
+    } else {
+      _baseUrl = defaultUrl;
+    }
   }
 
   Future<void> setBaseUrl(String url) async {
