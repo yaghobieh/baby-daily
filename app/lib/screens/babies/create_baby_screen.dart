@@ -112,7 +112,7 @@ class _CreateBabyScreenState extends State<CreateBabyScreen> {
                   borderRadius: BorderRadius.circular(16),
                   side: const BorderSide(color: AppTheme.divider),
                 ),
-                tileColor: const Color(0xFFF4F6F9),
+                tileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 leading: const Icon(Icons.cake_outlined, color: AppTheme.defaultPrimary),
                 title: Text(s.birthDate),
                 subtitle: Text(
@@ -120,7 +120,7 @@ class _CreateBabyScreenState extends State<CreateBabyScreen> {
                       ? s.selectDate
                       : DateFormat.yMMMMd().format(_birthDate!),
                   style: TextStyle(
-                    color: _birthDate == null ? AppTheme.textMuted : AppTheme.textMain,
+                    color: _birthDate == null ? AppTheme.textMuted : AppTheme.ink(context),
                     fontWeight: _birthDate == null ? FontWeight.normal : FontWeight.bold,
                   ),
                 ),

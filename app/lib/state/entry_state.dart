@@ -89,14 +89,22 @@ class EntryState extends ChangeNotifier {
     DateTime? endedAt,
     Map<String, dynamic> data = const {},
     String? note,
+    String? taggedUserId,
+    String? taggedUserName,
   }) async {
     try {
       await api.post('/babies/$babyId/entries', {
         'type': type,
         'startedAt': startedAt.toUtc().toIso8601String(),
         if (endedAt != null) 'endedAt': endedAt.toUtc().toIso8601String(),
-        'data': data,
+        'data': {
+          ...data,
+          ?taggedUserId: taggedUserId,
+          ?taggedUserName: taggedUserName,
+        },
         if (note != null && note.isNotEmpty) 'note': note,
+        ?taggedUserId: taggedUserId,
+        ?taggedUserName: taggedUserName,
       });
 
       await loadForBaby(babyId);

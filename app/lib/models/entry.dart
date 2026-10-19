@@ -8,6 +8,8 @@ class EntryModel {
   final String? note;
   final String? authorName;
   final String? authorId;
+  final String? taggedUserId;
+  final String? taggedUserName;
 
   EntryModel({
     required this.id,
@@ -19,6 +21,8 @@ class EntryModel {
     this.note,
     this.authorName,
     this.authorId,
+    this.taggedUserId,
+    this.taggedUserName,
   });
 
   bool get isSleepActive => type == 'SLEEP' && endedAt == null;
@@ -40,6 +44,8 @@ class EntryModel {
       note: json['note'] as String?,
       authorName: createdBy?['name'] as String?,
       authorId: createdBy?['id'] as String? ?? json['createdById'] as String?,
+      taggedUserId: json['taggedUserId'] as String? ?? (json['data'] as Map<String, dynamic>?)?['taggedUserId'] as String?,
+      taggedUserName: json['taggedUserName'] as String? ?? (json['data'] as Map<String, dynamic>?)?['taggedUserName'] as String?,
     );
   }
 
@@ -49,6 +55,8 @@ class EntryModel {
     if (endedAt != null) 'endedAt': endedAt!.toUtc().toIso8601String(),
     'data': data,
     if (note != null) 'note': note,
+    if (taggedUserId != null) 'taggedUserId': taggedUserId,
+    if (taggedUserName != null) 'taggedUserName': taggedUserName,
   };
 }
 

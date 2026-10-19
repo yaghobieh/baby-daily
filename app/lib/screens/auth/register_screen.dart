@@ -92,10 +92,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Text(
                     s.createAccount,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.textMain,
+                      color: AppTheme.ink(context),
                     ),
                   ),
                   const SizedBox(height: 6),

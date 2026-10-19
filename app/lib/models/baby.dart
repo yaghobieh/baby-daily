@@ -43,6 +43,7 @@ class BabyModel {
 
 class BabyMemberModel {
   final String id;
+  final String userId;
   final String role;
   final String name;
   final String email;
@@ -51,6 +52,7 @@ class BabyMemberModel {
 
   BabyMemberModel({
     required this.id,
+    required this.userId,
     required this.role,
     required this.name,
     required this.email,
@@ -60,12 +62,14 @@ class BabyMemberModel {
 
   factory BabyMemberModel.fromJson(Map<String, dynamic> json) {
     final user = json['user'] as Map<String, dynamic>? ?? {};
+    final uId = (json['userId'] as String?) ?? (user['id'] as String?) ?? (json['id'] as String);
     return BabyMemberModel(
       id: json['id'] as String,
+      userId: uId,
       role: json['role'] as String? ?? 'CAREGIVER',
-      name: user['name'] as String? ?? '',
-      email: user['email'] as String? ?? '',
-      phone: user['phone'] as String?,
+      name: user['name'] as String? ?? (json['name'] as String? ?? ''),
+      email: user['email'] as String? ?? (json['email'] as String? ?? ''),
+      phone: user['phone'] as String? ?? json['phone'] as String?,
       createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'] as String) : null,
     );
   }

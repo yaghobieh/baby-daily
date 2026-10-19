@@ -1,3 +1,4 @@
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../state/baby_state.dart';
@@ -18,6 +19,8 @@ class _RemindersScreenState extends State<RemindersScreen> {
   String _entryType = 'FEED';
   int _intervalHours = 3;
   TimeOfDay _timeOfDay = const TimeOfDay(hour: 10, minute: 0);
+  String? _taggedUserId;
+  String? _taggedUserName;
 
   @override
   void initState() {
@@ -41,6 +44,8 @@ class _RemindersScreenState extends State<RemindersScreen> {
     final baby = context.read<BabyState>().currentBaby;
     if (baby == null) return;
 
+    _taggedUserId = null;
+    _taggedUserName = null;
     _titleController.text = _kind == 'AFTER_LAST'
         ? '${s.feed} - every $_intervalHours hours'
         : 'Vitamin D drops';
@@ -51,9 +56,9 @@ class _RemindersScreenState extends State<RemindersScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: AppTheme.card(ctx),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: EdgeInsets.only(
             top: 24,
@@ -138,6 +143,47 @@ class _RemindersScreenState extends State<RemindersScreen> {
                   },
                 ),
               ],
+              const SizedBox(height: 14),
+              Text(s.assignReminderTo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: Text(s.nobodyTagged),
+                    selected: _taggedUserId == null,
+                    selectedColor: AppTheme.primaryLight,
+                    onSelected: (val) {
+                      if (val) setModalState(() { _taggedUserId = null; _taggedUserName = null; });
+                    },
+                  ),
+                  ...context.read<BabyState>().members.map((m) {
+                    final isSelected = _taggedUserId == m.userId;
+                    return ChoiceChip(
+                      avatar: const Text('👤', style: TextStyle(fontSize: 14)),
+                      label: Text(m.name),
+                      selected: isSelected,
+                      selectedColor: AppTheme.primaryLight,
+                      labelStyle: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                        color: isSelected ? AppTheme.primaryDark : null,
+                      ),
+                      onSelected: (val) {
+                        setModalState(() {
+                          if (val) {
+                            _taggedUserId = m.userId;
+                            _taggedUserName = m.name;
+                          } else {
+                            _taggedUserId = null;
+                            _taggedUserName = null;
+                          }
+                        });
+                      },
+                    );
+                  }),
+                ],
+              ),
               const SizedBox(height: 16),
               TextField(
                 controller: _titleController,
@@ -159,6 +205,8 @@ class _RemindersScreenState extends State<RemindersScreen> {
                       entryType: _kind == 'AFTER_LAST' ? _entryType : null,
                       intervalMinutes: _kind == 'AFTER_LAST' ? _intervalHours * 60 : null,
                       timeOfDay: _kind == 'DAILY_AT' ? _timeOfDay.hour * 60 + _timeOfDay.minute : null,
+                      taggedUserId: _taggedUserId,
+                      taggedUserName: _taggedUserName,
                     );
                     if (ctx.mounted) Navigator.pop(ctx);
                   },
@@ -246,9 +294,9 @@ class _RemindersScreenState extends State<RemindersScreen> {
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppTheme.card(context),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppTheme.divider),
+                        border: Border.all(color: AppTheme.line(context)),
                       ),
                       child: Row(
                         children: [
@@ -272,18 +320,43 @@ class _RemindersScreenState extends State<RemindersScreen> {
                               children: [
                                 Text(
                                   r.title,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.ink(context)),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   subText,
                                   style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
                                 ),
+                                if (r.taggedUserName != null && r.taggedUserName!.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryLight,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '👥 ${s.assignReminderTo}: ${r.taggedUserName}',
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryDark),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
                           IconButton(
-                            icon: Icon(Icons.delete_outline, size: 20, color: Colors.red.shade400),
+                            icon: const Icon(Icons.chat_bubble_outline, size: 18, color: Color(0xFF25D366)),
+                            tooltip: s.shareWhatsApp,
+                            onPressed: () {
+                              final assigned = r.taggedUserName != null ? ' (עבור ${r.taggedUserName})' : '';
+                              final msg = s.isHe
+                                  ? '⏰ תזכורת בייבי דיילי: ${r.title}$assigned | $subText'
+                                  : '⏰ BabyDaily Reminder: ${r.title}$assigned | $subText';
+                              launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(msg)}'), mode: LaunchMode.externalApplication);
+                            },
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.delete_outline, size: 20, color: AppTheme.danger),
                             tooltip: s.delete,
                             onPressed: () async {
                               final confirmed = await showDialog<bool>(
@@ -310,7 +383,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(s.reminderDeletedSuccess),
-                                      backgroundColor: Colors.green.shade700,
+                                      backgroundColor: AppTheme.mint,
                                     ),
                                   );
                                 }

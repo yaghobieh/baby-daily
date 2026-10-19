@@ -1,69 +1,36 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
+/// "Today" tile: soft tint background, colored label, big value, muted sub-label.
 class StatCard extends StatelessWidget {
+  final String type; // FEED | SLEEP | DIAPER ...
   final String title;
   final String value;
   final String? subtitle;
-  final String emoji;
-  final Color color;
-  final Color bgColor;
 
   const StatCard({
     super.key,
+    required this.type,
     required this.title,
     required this.value,
     this.subtitle,
-    required this.emoji,
-    required this.color,
-    required this.bgColor,
   });
 
   @override
   Widget build(BuildContext context) {
+    final act = AppTheme.act(type);
+    final dark = AppTheme.isDark(context);
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: color.withValues(alpha: 0.15), width: 1.2),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(color: act.soft(dark), borderRadius: BorderRadius.circular(20)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-              Text(emoji, style: const TextStyle(fontSize: 20)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1E272E),
-            ),
-          ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              subtitle!,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: act.strong)),
+          const SizedBox(height: 6),
+          Text(value, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AppTheme.ink(context), height: 1.1)),
+          const SizedBox(height: 2),
+          Text(subtitle ?? ' ', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
         ],
       ),
     );

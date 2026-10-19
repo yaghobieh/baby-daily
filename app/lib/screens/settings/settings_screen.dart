@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../api/api_client.dart';
 import '../../state/auth_state.dart';
 import '../../state/baby_state.dart';
+import '../../state/channel_state.dart';
 import '../../state/locale_state.dart';
 import '../../state/notification_state.dart';
 import '../../state/theme_state.dart';
@@ -17,7 +18,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late final TextEditingController _urlController;
   final TextEditingController _testPhoneController = TextEditingController();
   bool _notifyEnabled = true;
   bool _isSendingTest = false;
@@ -25,9 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    final api = context.read<ApiClient>();
     final user = context.read<AuthState>().user;
-    _urlController = TextEditingController(text: api.baseUrl);
     if (user?.phone != null) {
       _testPhoneController.text = user!.phone!;
     }
@@ -76,15 +74,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       phone: phone.isNotEmpty ? phone : null,
       title: s.isHe ? '🔔 התראת בדיקה - בייבי דיילי' : '🔔 BabyDaily Test Notification',
       body: s.isHe
-          ? 'התראה נשלחה בהצלחה למספר $phone בשעה ${TimeOfDay.now().format(context)}!'
-          : 'Notification sent successfully to ${phone.isNotEmpty ? phone : "your device"} at ${TimeOfDay.now().format(context)}!',
+          ? 'התראה נשלחה בהצלחה למכשיר שלך בשעה ${TimeOfDay.now().format(context)}!'
+          : 'Notification sent successfully at ${TimeOfDay.now().format(context)}!',
     );
 
     if (mounted) {
       setState(() => _isSendingTest = false);
       messenger.showSnackBar(
         SnackBar(
-          backgroundColor: res != null ? AppTheme.mint : Colors.redAccent,
+          backgroundColor: res != null ? AppTheme.mint : AppTheme.danger,
           content: Text(res != null ? s.testAlertSentSuccess : s.errorOccurred),
         ),
       );
@@ -95,8 +93,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final s = context.read<LocaleState>().strings;
     final phone = _testPhoneController.text.trim().replaceAll(RegExp(r'[^0-9+]'), '');
     final msg = s.isHe
-        ? '🍼 *בדיקת התראה מבייבי דיילי*\nשלום! מערכת ההתראות של בייבי דיילי מחוברת ופעילה.'
-        : '🍼 *BabyDaily Notification Test*\nHello! The BabyDaily notification system is active.';
+        ? '🍼 *בדיקת התראה מבייבי דיילי* - מערכת ההתראות של בייבי דיילי מחוברת ופעילה.'
+        : '🍼 *BabyDaily Notification Test* - BabyDaily notification system is active.';
     final cleanPhone = phone.startsWith('+') ? phone.substring(1) : (phone.startsWith('0') ? '972${phone.substring(1)}' : phone);
     final url = cleanPhone.isNotEmpty
         ? 'https://wa.me/$cleanPhone?text=${Uri.encodeComponent(msg)}'
@@ -107,17 +105,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _sendTelegramAlert() async {
     final s = context.read<LocaleState>().strings;
     final msg = s.isHe
-        ? '🍼 *בדיקת התראה מבייבי דיילי*\nשלום! מערכת ההתראות של בייבי דיילי מחוברת ופעילה.'
-        : '🍼 *BabyDaily Notification Test*\nHello! The BabyDaily notification system is active.';
+        ? '🍼 *בדיקת התראה מבייבי דיילי* - מערכת ההתראות של בייבי דיילי מחוברת ופעילה.'
+        : '🍼 *BabyDaily Notification Test* - BabyDaily notification system is active.';
     final url = 'https://t.me/share/url?text=${Uri.encodeComponent(msg)}';
     await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 
   Future<void> _sendAllChannelsAlert() async {
     final s = context.read<LocaleState>().strings;
+    final channels = context.read<ChannelState>();
     final messenger = ScaffoldMessenger.of(context);
     await _sendTestAlert();
-    await _sendWhatsAppAlert();
+    if (channels.whatsapp) {
+      await _sendWhatsAppAlert();
+    } else if (channels.telegram) {
+      await _sendTelegramAlert();
+    }
     if (mounted) {
       messenger.showSnackBar(
         SnackBar(
@@ -130,7 +133,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
-    _urlController.dispose();
     _testPhoneController.dispose();
     super.dispose();
   }
@@ -140,24 +142,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final s = context.watch<LocaleState>().strings;
     final localeState = context.watch<LocaleState>();
     final themeState = context.watch<ThemeState>();
+    final channels = context.watch<ChannelState>();
     final auth = context.watch<AuthState>();
     final user = auth.user;
+
+    final cardBg = AppTheme.card(context);
+    final line = AppTheme.line(context);
+    final ink = AppTheme.ink(context);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(s.navSettings),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         children: [
           // Profile Card
           if (user != null)
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cardBg,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.divider),
+                border: Border.all(color: line),
               ),
               child: Row(
                 children: [
@@ -177,7 +184,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         Text(
                           user.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: ink),
                         ),
                         Text(
                           user.email,
@@ -195,15 +202,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
 
-          // Application Theme Colors Section (Changes whole app colors!)
+          // Appearance Mode (Light / Dark / System)
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cardBg,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.divider),
+              border: Border.all(color: line),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.brightness_medium_rounded, color: AppTheme.defaultPrimary, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        s.appearance,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: ink),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                SegmentedButton<ThemeMode>(
+                  segments: [
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      label: Text(s.themeModeLight, style: const TextStyle(fontSize: 12)),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      label: Text(s.themeModeDark, style: const TextStyle(fontSize: 12)),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      label: Text(s.themeModeAuto, style: const TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                  selected: {themeState.mode},
+                  onSelectionChanged: (set) {
+                    if (set.isNotEmpty) themeState.setMode(set.first);
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          // Application Theme Colors Section
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: line),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,8 +268,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Row(
                   children: [
                     Container(
-                      width: 24,
-                      height: 24,
+                      width: 22,
+                      height: 22,
                       decoration: BoxDecoration(
                         color: themeState.primaryColor,
                         shape: BoxShape.circle,
@@ -222,7 +279,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Expanded(
                       child: Text(
                         s.appThemeColor,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: ink),
                       ),
                     ),
                   ],
@@ -239,32 +296,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: ThemeState.availableColors.map((hex) {
                     final clean = hex.replaceAll('#', '');
                     final color = Color(int.parse('FF$clean', radix: 16));
-                    final isSelected = themeState.colorHex == hex;
+                    final isSelected = themeState.colorHex.toUpperCase() == hex.toUpperCase();
 
-                    return InkWell(
+                    return GestureDetector(
                       onTap: () => themeState.setColorHex(hex),
-                      borderRadius: BorderRadius.circular(24),
                       child: Container(
-                        width: 44,
-                        height: 44,
+                        width: 42,
+                        height: 42,
                         decoration: BoxDecoration(
                           color: color,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isSelected ? Colors.black87 : Colors.white,
-                            width: isSelected ? 3.5 : 2,
+                            color: isSelected ? ink : Colors.transparent,
+                            width: 3,
                           ),
                           boxShadow: [
-                            if (isSelected)
-                              BoxShadow(
-                                color: color.withValues(alpha: 0.5),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
-                              ),
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.35),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
                           ],
                         ),
                         child: isSelected
-                            ? const Icon(Icons.check, color: Colors.white, size: 22)
+                            ? const Icon(Icons.check, color: Colors.white, size: 20)
                             : null,
                       ),
                     );
@@ -276,26 +331,88 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 18),
 
-          // Send Test Notification Section
+          // Messaging Channels (WhatsApp / Telegram)
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cardBg,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.divider),
+              border: Border.all(color: line),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.send_to_mobile_outlined, color: AppTheme.mint, size: 22),
+                    const Icon(Icons.forum_outlined, color: AppTheme.lavender, size: 22),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        s.testNotificationTitle,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        s.messagingChannels,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: ink),
                       ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  s.channelsSubtitle,
+                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  secondary: const CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Color(0xFF25D366),
+                    foregroundColor: Colors.white,
+                    child: Icon(Icons.chat, size: 16),
+                  ),
+                  title: Text(s.enableWhatsApp, style: TextStyle(fontWeight: FontWeight.w700, color: ink)),
+                  subtitle: Text(s.enableWhatsAppSubtitle, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                  value: channels.whatsapp,
+                  activeTrackColor: themeState.primaryColor,
+                  onChanged: (v) => channels.setWhatsapp(v),
+                ),
+                const Divider(height: 16),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  secondary: const CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Color(0xFF0088CC),
+                    foregroundColor: Colors.white,
+                    child: Icon(Icons.send, size: 16),
+                  ),
+                  title: Text(s.enableTelegram, style: TextStyle(fontWeight: FontWeight.w700, color: ink)),
+                  subtitle: Text(s.enableTelegramSubtitle, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                  value: channels.telegram,
+                  activeTrackColor: themeState.primaryColor,
+                  onChanged: (v) => channels.setTelegram(v),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          // Instant Test Alert Section
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: line),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.notifications_active_outlined, color: AppTheme.mint, size: 22),
+                    const SizedBox(width: 8),
+                    Text(
+                      s.testNotificationTitle,
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: ink),
                     ),
                   ],
                 ),
@@ -308,18 +425,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 TextField(
                   controller: _testPhoneController,
                   keyboardType: TextInputType.phone,
+                  style: TextStyle(color: ink),
                   decoration: InputDecoration(
                     labelText: s.enterTestPhone,
                     hintText: '+972 50 123 4567',
-                    prefixIcon: const Icon(Icons.phone_iphone),
+                    prefixIcon: const Icon(Icons.phone),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.mint,
+                      backgroundColor: themeState.primaryColor,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: _isSendingTest ? null : _sendTestAlert,
@@ -333,50 +452,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     label: Text(s.sendTestAlert),
                   ),
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF25D366),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                if (channels.whatsapp || channels.telegram) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      if (channels.whatsapp)
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF25D366),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: _sendWhatsAppAlert,
+                            icon: const Icon(Icons.chat, size: 18),
+                            label: Text(s.shareWhatsApp),
+                          ),
                         ),
-                        onPressed: _sendWhatsAppAlert,
-                        icon: const Icon(Icons.chat, size: 18),
-                        label: Text(s.shareWhatsApp),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0088CC),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                      if (channels.whatsapp && channels.telegram) const SizedBox(width: 8),
+                      if (channels.telegram)
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0088CC),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: _sendTelegramAlert,
+                            icon: const Icon(Icons.send, size: 18),
+                            label: Text(s.shareTelegram),
+                          ),
                         ),
-                        onPressed: _sendTelegramAlert,
-                        icon: const Icon(Icons.send, size: 18),
-                        label: Text(s.shareTelegram),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: themeState.primaryColor,
-                      side: BorderSide(color: themeState.primaryColor),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    onPressed: _sendAllChannelsAlert,
-                    icon: const Icon(Icons.all_inclusive, size: 18),
-                    label: Text(s.shareAll),
+                    ],
                   ),
-                ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: themeState.primaryColor,
+                        side: BorderSide(color: themeState.primaryColor),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: _sendAllChannelsAlert,
+                      icon: const Icon(Icons.all_inclusive, size: 18),
+                      label: Text(s.shareAll),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -386,16 +509,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Language Switch
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cardBg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.divider),
+              border: Border.all(color: line),
             ),
             child: ListTile(
               leading: Icon(Icons.language, color: themeState.primaryColor),
-              title: Text(s.language),
+              title: Text(s.language, style: TextStyle(color: ink, fontWeight: FontWeight.w600)),
               trailing: DropdownButton<String>(
                 value: localeState.locale,
                 underline: const SizedBox(),
+                dropdownColor: cardBg,
+                style: TextStyle(color: ink, fontWeight: FontWeight.w700),
                 items: const [
                   DropdownMenuItem(value: 'en', child: Text('English')),
                   DropdownMenuItem(value: 'he', child: Text('עברית (Hebrew)')),
@@ -412,16 +537,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Notifications Switch
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cardBg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.divider),
+              border: Border.all(color: line),
             ),
             child: SwitchListTile(
               secondary: const Icon(Icons.notifications_active_outlined, color: AppTheme.lavender),
-              title: Text(s.enablePush),
+              title: Text(s.enablePush, style: TextStyle(color: ink, fontWeight: FontWeight.w600)),
               subtitle: Text(
                 s.enablePushSubtitle,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
               ),
               value: _notifyEnabled,
               activeTrackColor: themeState.primaryColor,
@@ -429,77 +554,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
 
-          const SizedBox(height: 12),
-
-          // Server URL setting
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.divider),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.dns_outlined, color: AppTheme.sky, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      s.serverUrl,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _urlController,
-                        decoration: const InputDecoration(
-                          hintText: 'http://localhost:5050',
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      ),
-                      onPressed: () async {
-                        final api = context.read<ApiClient>();
-                        final messenger = ScaffoldMessenger.of(context);
-                        await api.setBaseUrl(_urlController.text.trim());
-                        if (mounted) {
-                          messenger.showSnackBar(
-                            SnackBar(content: Text(s.serverUrlUpdated)),
-                          );
-                        }
-                      },
-                      child: Text(s.save),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 36),
+          const SizedBox(height: 28),
 
           // Logout Button
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.redAccent,
-              side: const BorderSide(color: Colors.redAccent),
+              foregroundColor: AppTheme.danger,
+              side: const BorderSide(color: AppTheme.danger),
             ),
             icon: const Icon(Icons.logout),
             label: Text(s.logout),
             onPressed: () => auth.logout(),
           ),
+          const SizedBox(height: 20),
         ],
       ),
     );

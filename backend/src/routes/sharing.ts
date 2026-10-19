@@ -8,6 +8,8 @@ import { publicUserSelect, uid } from '../lib/http.js';
 import { t } from '../lib/i18n.js';
 import { BabyParams, IdParams, InviteBody, MemberParams, MemberPatchBody, SettingsBody } from '../schemas.js';
 import { notifyUser } from '../services/notify.js';
+import { sendInviteEmail } from '../services/email.js';
+import { env } from '../env.js';
 
 /** Sharing: invitations by email/phone, members & roles, per-member notification settings. */
 export default async function sharingRoutes(app: FastifyInstance) {
@@ -20,7 +22,7 @@ export default async function sharingRoutes(app: FastifyInstance) {
     return prisma.invitation.findMany({ where: { babyId, status: 'PENDING' }, orderBy: { createdAt: 'desc' } });
   });
 
-  app.post('/babies/:babyId/invitations', async (req, reply) => {
+  const inviteHandler = async (req: any, reply: any) => {
     const { babyId } = BabyParams.parse(req.params);
     await requireMember(babyId, uid(req), 'OWNER');
     const b = InviteBody.parse(req.body);
@@ -29,75 +31,83 @@ export default async function sharingRoutes(app: FastifyInstance) {
     const pKey = phoneKey(b.phone);
     if (!email && !pKey) throw badRequest('invalid_contact');
 
-    // Is there already an account for this contact?
-    let target = await prisma.user.findFirst({
+    const target = await prisma.user.findFirst({
       where: { OR: [...(email ? [{ email }] : []), ...(pKey ? [{ phoneKey: pKey }] : [])] },
     });
     if (target?.id === uid(req)) throw badRequest('cannot_invite_self');
 
     const [me, baby] = await Promise.all([
-      prisma.user.findUniqueOrThrow({ where: { id: uid(req) }, select: { name: true } }),
+      prisma.user.findUniqueOrThrow({ where: { id: uid(req) }, select: { name: true, locale: true } }),
       prisma.baby.findUniqueOrThrow({ where: { id: babyId }, select: { name: true } }),
     ]);
 
-    if (!target) {
-      // Auto-create user account so they can immediately be added as a follower and receive notifications
-      const contactName = email ? email.split('@')[0] : (phone ?? 'Caregiver');
-      const tempHash = await bcrypt.hash('baby123456', 10);
-      target = await prisma.user.create({
-        data: {
-          name: contactName,
-          email: email ?? `user_${Date.now()}@placeholder.local`,
-          phone,
-          phoneKey: pKey,
-          passwordHash: tempHash,
-          locale: 'he',
-        },
+    let member = null;
+    let invitation;
+    if (target) {
+      // Existing account -> they join right away and get an in-app alert.
+      member = await prisma.babyMember.upsert({
+        where: { babyId_userId: { babyId, userId: target.id } },
+        create: { babyId, userId: target.id, role: b.role, notifyEnabled: true },
+        update: { role: b.role, notifyEnabled: true },
       });
-      req.log.info(`[Auto-created user for invitee ${email ?? phone}]`);
+      invitation = await prisma.invitation.create({
+        data: { babyId, invitedById: uid(req), email, phone, phoneKey: pKey, role: b.role, status: 'ACCEPTED', respondedAt: new Date() },
+      });
+      void notifyUser(target.id, {
+        title: target.locale === 'he' ? `👶 הצטרפת למעקב אחרי ${baby.name}` : `👶 Following ${baby.name}`,
+        body: target.locale === 'he'
+          ? `${me.name} הוסיף/ה אותך כ${b.role === 'CAREGIVER' ? 'מטפל/ת' : 'צופה'} עבור ${baby.name}.`
+          : `${me.name} added you as a ${b.role === 'CAREGIVER' ? 'Caregiver' : 'Viewer'} for ${baby.name}.`,
+        babyId,
+        data: { type: 'member_joined', role: b.role },
+      }).catch((e) => req.log.error(e));
+    } else {
+      // No account yet -> pending invitation, auto-accepted when they register with this email/phone.
+      const existing = await prisma.invitation.findFirst({
+        where: { babyId, status: 'PENDING', OR: [...(email ? [{ email }] : []), ...(pKey ? [{ phoneKey: pKey }] : [])] },
+      });
+      invitation = existing
+        ? await prisma.invitation.update({ where: { id: existing.id }, data: { role: b.role } })
+        : await prisma.invitation.create({
+            data: { babyId, invitedById: uid(req), email, phone, phoneKey: pKey, role: b.role, status: 'PENDING' },
+          });
     }
 
-    // Directly add as BabyMember so they get routine notifications immediately!
-    const member = await prisma.babyMember.upsert({
-      where: { babyId_userId: { babyId, userId: target.id } },
-      create: { babyId, userId: target.id, role: b.role, notifyEnabled: true },
-      update: { role: b.role, notifyEnabled: true },
-    });
+    // Email (nice template). SMS is intentionally disabled for now.
+    const mailTo = email ?? (target && !target.email.endsWith('@placeholder.local') ? target.email : null);
+    let emailSent = false;
+    let emailError: string | undefined;
+    if (mailTo) {
+      const r = await sendInviteEmail({
+        to: mailTo,
+        inviterName: me.name,
+        babyName: baby.name,
+        role: b.role === 'VIEWER' ? 'VIEWER' : 'CAREGIVER',
+        locale: target?.locale ?? me.locale ?? 'en',
+        hasAccount: !!target,
+      });
+      emailSent = r.sent;
+      emailError = r.error;
+      req.log.info(`[INVITE EMAIL ${r.sent ? 'SENT' : 'NOT SENT'} to ${mailTo}] ${r.error ?? ''}`);
+    }
 
-    const invitation = await prisma.invitation.create({
-      data: {
-        babyId,
-        invitedById: uid(req),
-        email,
-        phone,
-        phoneKey: pKey,
-        role: b.role,
-        status: 'ACCEPTED',
-        respondedAt: new Date(),
-      },
-    });
-
-    // Send instant in-app / push notification to the added user!
-    void notifyUser(target.id, {
-      title: target.locale === 'he' ? `👶 הצטרפת למעקב אחרי ${baby.name}` : `👶 Following ${baby.name}`,
-      body: target.locale === 'he'
-        ? `${me.name} הוסיף/ה אותך כ${b.role === 'CAREGIVER' ? 'מטפל/ת' : 'צופה'} עבור ${baby.name}! מעכשיו תקבל/י התראות על כל פעילות.`
-        : `${me.name} added you as a ${b.role === 'CAREGIVER' ? 'Caregiver' : 'Viewer'} for ${baby.name}! You will now receive routine notifications.`,
-      babyId,
-      data: { type: 'member_joined', role: b.role },
-    }).catch((e) => req.log.error(e));
-
-    // Also log notification sent to email or phone
-    req.log.info(`[NOTIFICATION SENT to ${email ?? phone}]: ${me.name} added you to track baby ${baby.name} on BabyDaily!`);
-
+    const link = `${env.APP_URL}/?invite=1${email ? `&email=${encodeURIComponent(email)}` : ''}`;
+    const shareText = `🍼 ${me.name} → BabyDaily: ${baby.name}\n${link}`;
     return reply.code(201).send({
       invitation,
       member,
-      userExists: true,
-      memberAdded: true,
-      message: `${target.name} נוסף/ה בהצלחה ויקבל/י התראות!`,
+      userExists: !!target,
+      memberAdded: !!member,
+      emailSent,
+      emailError,
+      inviteLink: link,
+      whatsappUrl: `https://wa.me/${phone ? phone.replace(/\D/g, '') : ''}?text=${encodeURIComponent(shareText)}`,
+      telegramUrl: `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(shareText)}`,
     });
-  });
+  };
+
+  app.post('/babies/:babyId/invitations', inviteHandler);
+  app.post('/babies/:babyId/invite', inviteHandler);
 
   app.delete('/invitations/:id', async (req, reply) => {
     const { id } = IdParams.parse(req.params);

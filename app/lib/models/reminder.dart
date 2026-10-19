@@ -7,6 +7,8 @@ class ReminderModel {
   final int? intervalMinutes;
   final int? timeOfDay; // minutes from midnight
   final bool enabled;
+  final String? taggedUserId;
+  final String? taggedUserName;
   final DateTime? nextAt;
 
   ReminderModel({
@@ -18,6 +20,8 @@ class ReminderModel {
     this.intervalMinutes,
     this.timeOfDay,
     this.enabled = true,
+    this.taggedUserId,
+    this.taggedUserName,
     this.nextAt,
   });
 
@@ -31,6 +35,8 @@ class ReminderModel {
       intervalMinutes: json['intervalMinutes'] as int?,
       timeOfDay: json['timeOfDay'] as int?,
       enabled: json['enabled'] as bool? ?? true,
+      taggedUserId: json['taggedUserId'] as String?,
+      taggedUserName: json['taggedUserName'] as String?,
       nextAt: json['nextAt'] != null ? DateTime.tryParse(json['nextAt'] as String) : null,
     );
   }

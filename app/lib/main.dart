@@ -6,6 +6,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'state/auth_state.dart';
 import 'state/baby_state.dart';
+import 'state/channel_state.dart';
 import 'state/entry_state.dart';
 import 'state/locale_state.dart';
 import 'state/notification_state.dart';
@@ -24,6 +25,9 @@ void main() async {
   final themeState = ThemeState();
   await themeState.init();
 
+  final channelState = ChannelState();
+  await channelState.init();
+
   final authState = AuthState(apiClient);
   await authState.init();
 
@@ -33,6 +37,7 @@ void main() async {
         Provider<ApiClient>.value(value: apiClient),
         ChangeNotifierProvider<LocaleState>.value(value: localeState),
         ChangeNotifierProvider<ThemeState>.value(value: themeState),
+        ChangeNotifierProvider<ChannelState>.value(value: channelState),
         ChangeNotifierProvider<AuthState>.value(value: authState),
         ChangeNotifierProvider<BabyState>(create: (_) => BabyState(apiClient)),
         ChangeNotifierProvider<EntryState>(create: (_) => EntryState(apiClient)),
@@ -56,7 +61,9 @@ class BabyDailyApp extends StatelessWidget {
     return MaterialApp(
       title: 'BabyDaily',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(localeState.locale, themeState.primaryColor),
+      theme: AppTheme.build(Brightness.light, themeState.primaryColor),
+      darkTheme: AppTheme.build(Brightness.dark, themeState.primaryColor),
+      themeMode: themeState.mode,
       locale: localeState.flutterLocale,
       supportedLocales: const [
         Locale('en', ''),

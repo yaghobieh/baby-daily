@@ -46,7 +46,7 @@ export async function rescheduleAfterEntry(babyId: string, type: EntryType) {
 
 let running = false;
 
-async function tick() {
+export async function tick() {
   if (running) return;
   running = true;
   try {

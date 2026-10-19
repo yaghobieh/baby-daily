@@ -183,4 +183,28 @@ class AppStrings {
   String get shareTelegram => isHe ? 'שיתוף ב-Telegram' : 'Share on Telegram';
   String get shareAll => isHe ? 'שליחה לכל הערוצים (התראה + WhatsApp + Telegram)' : 'Send to All Channels';
   String get shareSuccess => isHe ? 'הודעת השיתוף הוכנה ונשלחה בהצלחה!' : 'Share message sent successfully!';
+
+  // Appearance & Channels
+  String get appearance => isHe ? 'מראה ותצוגה' : 'Appearance';
+  String get themeModeAuto => isHe ? 'לפי הגדרות המכשיר' : 'System Default';
+  String get themeModeLight => isHe ? 'מצב בהיר ☀️' : 'Light Mode ☀️';
+  String get themeModeDark => isHe ? 'מצב כהה 🌙' : 'Dark Mode 🌙';
+  String get messagingChannels => isHe ? 'ערוצי שיתוף והודעות' : 'Messaging Channels';
+  String get channelsSubtitle => isHe ? 'בחר/י באילו אפליקציות ברצונך לשתף או לקבל התראות' : 'Select which channels to enable for sharing and alerts';
+  String get enableWhatsApp => isHe ? 'WhatsApp' : 'WhatsApp';
+  String get enableWhatsAppSubtitle => isHe ? 'אפשר שיתוף קישורים והזמנות ישירות לוואטסאפ' : 'Enable sharing links and invitations via WhatsApp';
+  String get enableTelegram => isHe ? 'Telegram' : 'Telegram';
+  String get enableTelegramSubtitle => isHe ? 'אפשר שיתוף קישורים והזמנות ישירות לטלגרם' : 'Enable sharing links and invitations via Telegram';
+  String get emailSentNice => isHe ? 'נשלח אימייל הזמנה מעוצב עם קישור כניסה!' : 'A formatted invitation email with an entry link was sent!';
+  String get emailNotSentWarn => isHe ? 'ההזמנה נוצרה, אך שליחת האימייל לא הוגדרה בשרת.' : 'Invitation created, but email sending is not configured on the server.';
+  String get memberAddedDirectly => isHe ? 'המשתמש/ת כבר קיים במערכת וצורף ישירות למעקב!' : 'User exists and was directly added to the baby tracker!';
+
+  // Tagging & Caregiver with Baby
+  String get whoIsWithBaby => isHe ? 'מי נמצא/ת עם התינוק/ת?' : 'Who is with the baby?';
+  String get tagCaregiver => isHe ? 'תיוג שותף/ה' : 'Tag Caregiver';
+  String get withPerson => isHe ? 'ביחד עם' : 'With';
+  String get assignReminderTo => isHe ? 'שיוך תזכורת אל' : 'Assign reminder to';
+  String get nobodyTagged => isHe ? 'ללא שיוך' : 'None';
+  String get notifyViaWhatsApp => isHe ? 'שליחת עדכון ב-WhatsApp' : 'Send update via WhatsApp';
+  String get whatsappShareAction => isHe ? 'שיתוף פעולה ב-WhatsApp' : 'Share on WhatsApp';
 }
