@@ -1,3 +1,4 @@
+import 'forgot_password_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../state/auth_state.dart';
@@ -123,7 +124,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                        );
+                      },
+                      child: Text(s.forgotPassword, style: const TextStyle(fontSize: 13)),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
                   ElevatedButton(
                     onPressed: auth.isLoading ? null : _handleLogin,
                     child: auth.isLoading

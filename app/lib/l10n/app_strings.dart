@@ -207,4 +207,13 @@ class AppStrings {
   String get nobodyTagged => isHe ? 'ללא שיוך' : 'None';
   String get notifyViaWhatsApp => isHe ? 'שליחת עדכון ב-WhatsApp' : 'Send update via WhatsApp';
   String get whatsappShareAction => isHe ? 'שיתוף פעולה ב-WhatsApp' : 'Share on WhatsApp';
+
+  // Password Recovery
+  String get forgotPassword => isHe ? 'שכחת סיסמה?' : 'Forgot password?';
+  String get forgotPasswordTitle => isHe ? 'איפוס סיסמה' : 'Reset Password';
+  String get forgotPasswordSubtitle => isHe ? 'הזן/י את כתובת האימייל או הטלפון שלך ונשלח אליך קישור מאובטח לאיפוס הסיסמה.' : 'Enter your email or phone and we will send a secure password reset link.';
+  String get sendResetLink => isHe ? 'שליחת קישור איפוס' : 'Send Reset Link';
+  String get resetLinkSentTitle => isHe ? 'הקישור נשלח!' : 'Link Sent!';
+  String get resetLinkSentMessage => isHe ? 'אם החשבון קיים במערכת, נשלח אימייל מעוצב עם קישור לאיפוס הסיסמה.' : 'If your account is registered, a password reset email has been dispatched.';
+  String get backToLogin => isHe ? 'חזרה להתחברות' : 'Back to Login';
 }

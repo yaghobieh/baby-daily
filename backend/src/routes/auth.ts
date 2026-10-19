@@ -1,11 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../db.js';
-import { conflict, unauthorized } from '../lib/errors.js';
+import { badRequest, conflict, notFound, unauthorized } from '../lib/errors.js';
 import { normalizeEmail, normalizePhone, phoneKey } from '../lib/contact.js';
 import { toUserDto, uid } from '../lib/http.js';
-import { LoginBody, RegisterBody, UpdateMeBody } from '../schemas.js';
+import { ForgotPasswordBody, LoginBody, RegisterBody, ResetPasswordBody, UpdateMeBody } from '../schemas.js';
 import { notifyUser } from '../services/notify.js';
+import { sendPasswordResetEmail, sendWelcomeEmail } from '../services/email.js';
 
 export default async function authRoutes(app: FastifyInstance) {
   const sign = (userId: string) => app.jwt.sign({ sub: userId }, { expiresIn: '60d' });
@@ -122,6 +123,51 @@ export default async function authRoutes(app: FastifyInstance) {
       await prisma.user.update({ where: { id: user.id }, data: { utcOffset: b.utcOffset } });
     }
     return { token: sign(user.id), user: toUserDto(user) };
+  });
+
+  app.post('/auth/forgot-password', async (req) => {
+    const b = ForgotPasswordBody.parse(req.body);
+    const isEmail = b.identifier.includes('@');
+    const user = isEmail
+      ? await prisma.user.findUnique({ where: { email: normalizeEmail(b.identifier)! } })
+      : await prisma.user.findUnique({ where: { phoneKey: phoneKey(b.identifier) ?? '__none__' } });
+
+    if (user && user.email) {
+      const resetToken = app.jwt.sign({ sub: user.id, type: 'reset_password' } as any, { expiresIn: '1h' });
+      void sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        resetToken,
+        locale: user.locale,
+      }).catch((e) => req.log.error(e));
+    }
+
+    return { success: true, message: 'If an account exists with this detail, a password reset email was sent.' };
+  });
+
+  app.post('/auth/reset-password', async (req) => {
+    const b = ResetPasswordBody.parse(req.body);
+    let payload: { sub: string; type?: string };
+    try {
+      payload = app.jwt.verify(b.token) as { sub: string; type?: string };
+    } catch {
+      throw badRequest('invalid_or_expired_token');
+    }
+
+    if (payload.type !== 'reset_password' || !payload.sub) {
+      throw badRequest('invalid_token_type');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+    if (!user) throw notFound('user_not_found');
+
+    const passwordHash = await bcrypt.hash(b.password, 11);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+
+    return { success: true, message: 'Password has been reset successfully.' };
   });
 
   app.register(async (priv) => {

@@ -142,3 +142,12 @@ export const PhotoBody = z.object({
   mime: z.enum(['image/jpeg', 'image/png', 'image/webp']),
   data: z.string().min(10), // base64
 });
+
+export const ForgotPasswordBody = z.object({
+  identifier: z.string().trim().min(3).max(200),
+});
+
+export const ResetPasswordBody = z.object({
+  token: z.string().trim().min(10),
+  password: z.string().min(6).max(200),
+});
