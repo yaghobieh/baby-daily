@@ -123,6 +123,8 @@ class ReminderState extends ChangeNotifier {
     String? entryType,
     int? intervalMinutes,
     int? timeOfDay,
+    String? taggedUserId,
+    String? taggedUserName,
   }) async {
     try {
       await api.post('/babies/$babyId/reminders', {
@@ -132,6 +134,8 @@ class ReminderState extends ChangeNotifier {
         'intervalMinutes': ?intervalMinutes,
         'timeOfDay': ?timeOfDay,
         'utcOffset': DateTime.now().timeZoneOffset.inMinutes,
+        ?taggedUserId: taggedUserId,
+        ?taggedUserName: taggedUserName,
       });
 
       await loadForBaby(babyId);

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../l10n/app_strings.dart';
+import '../../state/baby_state.dart';
+import '../../state/channel_state.dart';
 import '../../state/locale_state.dart';
 import '../../state/entry_state.dart';
 import '../../theme/app_theme.dart';
@@ -53,6 +56,8 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
   // NOTE state
   String _mood = 'happy';
   final TextEditingController _noteController = TextEditingController();
+  String? _taggedUserId;
+  String? _taggedUserName;
 
   final DateTime _startedAt = DateTime.now();
   bool _isSubmitting = false;
@@ -122,6 +127,8 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
       endedAt: endedAt,
       data: data,
       note: _noteController.text.trim(),
+      taggedUserId: _taggedUserId,
+      taggedUserName: _taggedUserName,
     );
 
     if (mounted) {
@@ -384,6 +391,90 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
     );
   }
 
+
+  void _shareViaWhatsApp(String babyName, AppStrings s) {
+    final note = _noteController.text.trim();
+    final withWhom = _taggedUserName != null ? ' (ביחד עם $_taggedUserName)' : '';
+    final timeStr = '${_startedAt.hour.toString().padLeft(2, "0")}:${_startedAt.minute.toString().padLeft(2, "0")}';
+    final noteStr = note.isNotEmpty ? ' | הערה: $note' : '';
+    final msg = s.isHe
+        ? '🍼 בייבי דיילי: $_type$withWhom בשעה $timeStr$noteStr'
+        : '🍼 BabyDaily: $_type$withWhom at $timeStr$noteStr';
+    final url = 'https://wa.me/?text=${Uri.encodeComponent(msg)}';
+    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  }
+
+  Widget _buildCaregiverTagSelector(BabyState babyState, AppStrings s) {
+    final members = babyState.members;
+    final cardBg = Theme.of(context).colorScheme.surfaceContainerHighest;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.people_outline, size: 18, color: AppTheme.defaultPrimary),
+            const SizedBox(width: 8),
+            Text(
+              s.whoIsWithBaby,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: AppTheme.ink(context),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ChoiceChip(
+              label: Text(s.nobodyTagged),
+              selected: _taggedUserId == null,
+              selectedColor: AppTheme.primaryLight,
+              backgroundColor: cardBg,
+              onSelected: (val) {
+                if (val) {
+                  setState(() {
+                    _taggedUserId = null;
+                    _taggedUserName = null;
+                  });
+                }
+              },
+            ),
+            ...members.map((m) {
+              final isSelected = _taggedUserId == m.userId;
+              return ChoiceChip(
+                avatar: Text('👤', style: const TextStyle(fontSize: 14)),
+                label: Text(m.name),
+                selected: isSelected,
+                selectedColor: AppTheme.primaryLight,
+                backgroundColor: cardBg,
+                labelStyle: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected ? AppTheme.primaryDark : AppTheme.ink(context),
+                ),
+                onSelected: (val) {
+                  setState(() {
+                    if (val) {
+                      _taggedUserId = m.userId;
+                      _taggedUserName = m.name;
+                    } else {
+                      _taggedUserId = null;
+                      _taggedUserName = null;
+                    }
+                  });
+                },
+              );
+            }),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = context.watch<LocaleState>().strings;
@@ -443,6 +534,8 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
             if (_type == 'GROWTH') _buildGrowthForm(s),
             if (_type == 'MEDICINE') _buildMedicineForm(s),
             if (_type == 'NOTE') _buildNoteForm(s),
+            const SizedBox(height: 18),
+            _buildCaregiverTagSelector(context.watch<BabyState>(), s),
             const SizedBox(height: 16),
             TextField(
               controller: _noteController,
@@ -453,18 +546,37 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
               ),
             ),
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _submit,
-                child: _isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : Text(s.save),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isSubmitting ? null : _submit,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : Text(s.save),
+                  ),
+                ),
+                if (context.watch<ChannelState>().whatsapp) ...[
+                  const SizedBox(width: 10),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF25D366),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                    ),
+                    icon: const Icon(Icons.chat, size: 20),
+                    label: Text(s.shareWhatsApp),
+                    onPressed: () {
+                      final baby = context.read<BabyState>().currentBaby;
+                      _shareViaWhatsApp(baby?.name ?? 'Baby', s);
+                    },
+                  ),
+                ],
+              ],
             ),
           ],
         ),

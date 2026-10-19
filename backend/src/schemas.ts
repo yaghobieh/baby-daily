@@ -81,6 +81,8 @@ export const EntryBody = z.object({
   data: z.record(z.string(), z.unknown()).optional(),
   note: z.string().max(2000).nullable().optional(),
   photoId: z.string().nullable().optional(),
+  taggedUserId: z.string().nullable().optional(),
+  taggedUserName: z.string().nullable().optional(),
 });
 
 export const EntryPatchBody = EntryBody.omit({ type: true }).partial();
@@ -123,6 +125,8 @@ export const ReminderBody = z
     timeOfDay: z.number().int().min(0).max(1439).nullable().optional(),
     utcOffset: z.number().int().min(-840).max(840).default(0),
     enabled: z.boolean().default(true),
+    taggedUserId: z.string().nullable().optional(),
+    taggedUserName: z.string().nullable().optional(),
   })
   .refine((r) => (r.kind === 'AFTER_LAST' ? !!r.entryType && !!r.intervalMinutes : r.timeOfDay != null), {
     message: 'AFTER_LAST needs entryType+intervalMinutes; DAILY_AT needs timeOfDay',

@@ -1,3 +1,4 @@
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/entry.dart';
@@ -126,15 +127,49 @@ class EntryCard extends StatelessWidget {
                     child: Text(entry.note!, style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
                   ),
                 const SizedBox(height: 2),
-                Text(
-                  entry.authorName ?? (strings.isHe ? 'מטפל/ת' : 'Caregiver'),
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  children: [
+                    Text(
+                      entry.authorName ?? (strings.isHe ? 'מטפל/ת' : 'Caregiver'),
+                      style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                    ),
+                    if (entry.taggedUserName != null && entry.taggedUserName!.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryLight,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '👥 ${strings.withPerson} ${entry.taggedUserName}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryDark,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
           Text(timeStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textMuted)),
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, size: 16, color: Color(0xFF25D366)),
+            tooltip: strings.shareWhatsApp,
+            visualDensity: VisualDensity.compact,
+            onPressed: () {
+              final withWhom = entry.taggedUserName != null ? ' (ביחד עם ${entry.taggedUserName})' : '';
+              final msg = strings.isHe
+                  ? '🍼 בייבי דיילי: $title$withWhom בשעה $timeStr'
+                  : '🍼 BabyDaily: $title$withWhom at $timeStr';
+              launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(msg)}'), mode: LaunchMode.externalApplication);
+            },
+          ),
           if (onDelete != null)
             IconButton(
               icon: const Text('🗑', style: TextStyle(fontSize: 18)),

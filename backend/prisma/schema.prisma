@@ -130,6 +130,8 @@ model Entry {
   data        Json      @default("{}")
   note        String?
   photoId     String?
+  taggedUserId String?
+  taggedUserName String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -168,6 +170,8 @@ model Reminder {
   timeOfDay       Int?
   utcOffset       Int          @default(0)
   enabled         Boolean      @default(true)
+  taggedUserId    String?
+  taggedUserName  String?
   nextAt          DateTime?
   lastFiredAt     DateTime?
   createdAt       DateTime     @default(now())

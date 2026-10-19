@@ -198,4 +198,13 @@ class AppStrings {
   String get emailSentNice => isHe ? 'נשלח אימייל הזמנה מעוצב עם קישור כניסה!' : 'A formatted invitation email with an entry link was sent!';
   String get emailNotSentWarn => isHe ? 'ההזמנה נוצרה, אך שליחת האימייל לא הוגדרה בשרת.' : 'Invitation created, but email sending is not configured on the server.';
   String get memberAddedDirectly => isHe ? 'המשתמש/ת כבר קיים במערכת וצורף ישירות למעקב!' : 'User exists and was directly added to the baby tracker!';
+
+  // Tagging & Caregiver with Baby
+  String get whoIsWithBaby => isHe ? 'מי נמצא/ת עם התינוק/ת?' : 'Who is with the baby?';
+  String get tagCaregiver => isHe ? 'תיוג שותף/ה' : 'Tag Caregiver';
+  String get withPerson => isHe ? 'ביחד עם' : 'With';
+  String get assignReminderTo => isHe ? 'שיוך תזכורת אל' : 'Assign reminder to';
+  String get nobodyTagged => isHe ? 'ללא שיוך' : 'None';
+  String get notifyViaWhatsApp => isHe ? 'שליחת עדכון ב-WhatsApp' : 'Send update via WhatsApp';
+  String get whatsappShareAction => isHe ? 'שיתוף פעולה ב-WhatsApp' : 'Share on WhatsApp';
 }

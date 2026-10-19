@@ -106,6 +106,8 @@ export default async function babyRoutes(app: FastifyInstance) {
         data: validateData(b.type, b.data),
         note: b.note ?? null,
         photoId: b.photoId ?? null,
+        taggedUserId: b.taggedUserId ?? null,
+        taggedUserName: b.taggedUserName ?? null,
       },
       include: { ...entryInclude, baby: { select: { name: true } } },
     });
@@ -144,6 +146,8 @@ export default async function babyRoutes(app: FastifyInstance) {
         ...(b.data !== undefined ? { data: validateData(existing.type, b.data) } : {}),
         ...(b.note !== undefined ? { note: b.note } : {}),
         ...(b.photoId !== undefined ? { photoId: b.photoId } : {}),
+        ...(b.taggedUserId !== undefined ? { taggedUserId: b.taggedUserId } : {}),
+        ...(b.taggedUserName !== undefined ? { taggedUserName: b.taggedUserName } : {}),
       },
       include: { ...entryInclude, baby: { select: { name: true } } },
     });

@@ -40,6 +40,8 @@ export default async function miscRoutes(app: FastifyInstance) {
         timeOfDay: b.kind === 'DAILY_AT' ? b.timeOfDay! : null,
         utcOffset: b.utcOffset,
         enabled: b.enabled,
+        taggedUserId: b.taggedUserId ?? null,
+        taggedUserName: b.taggedUserName ?? null,
       },
     });
     const r = await prisma.reminder.update({ where: { id: created.id }, data: { nextAt: await computeNextAt(created) } });
@@ -66,6 +68,8 @@ export default async function miscRoutes(app: FastifyInstance) {
         timeOfDay: merged.kind === 'DAILY_AT' ? merged.timeOfDay! : null,
         utcOffset: merged.utcOffset,
         enabled: merged.enabled,
+        taggedUserId: merged.taggedUserId ?? null,
+        taggedUserName: merged.taggedUserName ?? null,
       },
     });
     return prisma.reminder.update({ where: { id }, data: { nextAt: await computeNextAt(updated) } });
