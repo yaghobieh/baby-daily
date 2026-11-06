@@ -4,13 +4,13 @@ import '../utils/app_storage.dart';
 
 class LocaleState extends ChangeNotifier {
   static const String _key = 'app_locale';
-  static const List<String> supportedCodes = ['he', 'en', 'es', 'ru'];
+  static const List<String> supportedCodes = ['ru', 'en', 'he', 'es'];
 
   static const Map<String, String> languageNames = {
-    'he': 'עברית',
-    'en': 'English',
-    'es': 'Español',
     'ru': 'Русский',
+    'en': 'English',
+    'he': 'עברית',
+    'es': 'Español',
   };
 
   String _locale = 'en';

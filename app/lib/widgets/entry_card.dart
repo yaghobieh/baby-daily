@@ -11,12 +11,16 @@ import '../theme/app_theme.dart';
 class EntryCard extends StatelessWidget {
   final EntryModel entry;
   final AppStrings strings;
+  final bool isPinned;
+  final VoidCallback? onTogglePin;
   final VoidCallback? onDelete;
 
   const EntryCard({
     super.key,
     required this.entry,
     required this.strings,
+    this.isPinned = false,
+    this.onTogglePin,
     this.onDelete,
   });
 
@@ -212,13 +216,43 @@ class EntryCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      primaryTitle,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: dark ? Colors.white : const Color(0xFF1F1A17),
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          primaryTitle,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: dark ? Colors.white : const Color(0xFF1F1A17),
+                          ),
+                        ),
+                        if (isPinned) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8C7AE6).withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.push_pin_rounded, size: 12, color: Color(0xFF8C7AE6)),
+                                const SizedBox(width: 3),
+                                Text(
+                                  strings.pin,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF8C7AE6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     Text(
                       timeStr,
@@ -245,6 +279,19 @@ class EntryCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (onTogglePin != null)
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: onTogglePin,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          child: Icon(
+                            isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                            size: 16,
+                            color: isPinned ? const Color(0xFF8C7AE6) : const Color(0xFF9CA3AF),
+                          ),
+                        ),
+                      ),
                     InkWell(
                       borderRadius: BorderRadius.circular(8),
                       onTap: () {

@@ -6,7 +6,6 @@ import '../../l10n/app_strings.dart';
 import '../../state/auth_state.dart';
 import '../../state/baby_state.dart';
 import '../../state/locale_state.dart';
-import '../../state/notification_state.dart';
 import '../../state/theme_state.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/phone_alarm.dart';
@@ -22,7 +21,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _inviteEmailController = TextEditingController();
   String _inviteRole = 'CAREGIVER';
   bool _notifyEnabled = true;
-  bool _isSendingTest = false;
   bool _isInviting = false;
 
   @override
@@ -67,39 +65,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         'quietEnd': null,
       });
     } catch (_) {}
-  }
-
-  Future<void> _sendPhoneNotificationTest() async {
-    final s = context.read<LocaleState>().strings;
-    final notifState = context.read<NotificationState>();
-    final messenger = ScaffoldMessenger.of(context);
-
-    setState(() => _isSendingTest = true);
-    final title = s.tr(
-      en: '🔔 BabyDaily Phone Alert',
-      he: '🔔 התראת בייבי דיילי למכשיר',
-      es: '🔔 Alerta de BabyDaily',
-      ru: '🔔 Уведомление BabyDaily',
-    );
-    final body = s.tr(
-      en: 'Notifications are active on this phone (${TimeOfDay.now().format(context)})',
-      he: 'ההתראות פעילות במכשיר זה (${TimeOfDay.now().format(context)})',
-      es: 'Las notificaciones están activas en este teléfono',
-      ru: 'Уведомления активны на этом телефоне',
-    );
-
-    await PhoneAlarm.showNotification(title: title, body: body);
-    await notifState.sendTestNotification(title: title, body: body);
-
-    if (mounted) {
-      setState(() => _isSendingTest = false);
-      messenger.showSnackBar(
-        SnackBar(
-          backgroundColor: AppTheme.mint,
-          content: Text(s.testAlertSentSuccess),
-        ),
-      );
-    }
   }
 
   Future<void> _showQuickNextMealAlarmSheet(AppStrings s) async {
@@ -454,26 +419,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   value: _notifyEnabled,
                   activeTrackColor: themeState.primaryColor,
                   onChanged: _updateBabySettings,
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: themeState.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                    ),
-                    onPressed: _isSendingTest ? null : _sendPhoneNotificationTest,
-                    icon: _isSendingTest
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Icon(Icons.notifications_active, size: 18),
-                    label: Text(s.sendTestAlert),
-                  ),
                 ),
                 const SizedBox(height: 10),
                 SizedBox(

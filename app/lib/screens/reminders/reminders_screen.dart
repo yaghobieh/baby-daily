@@ -19,6 +19,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
   String _entryType = 'FEED';
   int _intervalHours = 3;
   TimeOfDay _timeOfDay = const TimeOfDay(hour: 10, minute: 0);
+  String _deliveryMode = 'BOTH'; // NOTIFICATION, ALARM, or BOTH
   String? _taggedUserId;
   String? _taggedUserName;
 
@@ -185,6 +186,55 @@ class _RemindersScreenState extends State<RemindersScreen> {
                 ],
               ),
               const SizedBox(height: 16),
+              Text(
+                s.deliveryChannel,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<String>(
+                segments: [
+                  ButtonSegment(
+                    value: 'NOTIFICATION',
+                    label: Text(s.notificationOnly, style: const TextStyle(fontSize: 11)),
+                    icon: const Icon(Icons.notifications_active_outlined, size: 16),
+                  ),
+                  ButtonSegment(
+                    value: 'ALARM',
+                    label: Text(s.clockAlertOnly, style: const TextStyle(fontSize: 11)),
+                    icon: const Icon(Icons.alarm_rounded, size: 16),
+                  ),
+                  ButtonSegment(
+                    value: 'BOTH',
+                    label: Text(s.bothAlerts, style: const TextStyle(fontSize: 11)),
+                    icon: const Icon(Icons.alarm_on_rounded, size: 16),
+                  ),
+                ],
+                selected: {_deliveryMode},
+                onSelectionChanged: (set) {
+                  setModalState(() => _deliveryMode = set.first);
+                },
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.skyLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF0369A1)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        s.futureChannelsNote,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF0369A1)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               TextField(
                 controller: _titleController,
                 decoration: InputDecoration(
@@ -199,28 +249,47 @@ class _RemindersScreenState extends State<RemindersScreen> {
                   onPressed: () async {
                     final remState = context.read<ReminderState>();
                     final title = _titleController.text.trim();
+                    final formattedTime = _timeOfDay.format(context);
+                    final savedTitle = '$title [$_deliveryMode]';
+
                     await remState.createReminder(
                       babyId: baby.id,
                       kind: _kind,
-                      title: title,
+                      title: savedTitle,
                       entryType: _kind == 'AFTER_LAST' ? _entryType : null,
                       intervalMinutes: _kind == 'AFTER_LAST' ? _intervalHours * 60 : null,
                       timeOfDay: _kind == 'DAILY_AT' ? _timeOfDay.hour * 60 + _timeOfDay.minute : null,
                       taggedUserId: _taggedUserId,
                       taggedUserName: _taggedUserName,
                     );
-                    if (_kind == 'AFTER_LAST') {
-                      await PhoneAlarm.setAlarmAfter(
-                        duration: Duration(hours: _intervalHours),
-                        message: '🍼 $title (${baby.name})',
-                      );
-                    } else {
-                      await PhoneAlarm.setAlarm(
-                        hour: _timeOfDay.hour,
-                        minute: _timeOfDay.minute,
-                        message: '⏰ $title (${baby.name})',
+
+                    final hasAlarm = _deliveryMode == 'ALARM' || _deliveryMode == 'BOTH';
+                    final hasNotif = _deliveryMode == 'NOTIFICATION' || _deliveryMode == 'BOTH';
+
+                    if (hasAlarm) {
+                      if (_kind == 'AFTER_LAST') {
+                        await PhoneAlarm.setAlarmAfter(
+                          duration: Duration(hours: _intervalHours),
+                          message: '🍼 $title (${baby.name})',
+                        );
+                      } else {
+                        await PhoneAlarm.setAlarm(
+                          hour: _timeOfDay.hour,
+                          minute: _timeOfDay.minute,
+                          message: '⏰ $title (${baby.name})',
+                        );
+                      }
+                    }
+
+                    if (hasNotif) {
+                      await PhoneAlarm.showNotification(
+                        title: '🔔 ${baby.name}: $title',
+                        body: _kind == 'AFTER_LAST'
+                            ? 'Reminder scheduled in $_intervalHours hours'
+                            : 'Daily reminder at $formattedTime',
                       );
                     }
+
                     if (ctx.mounted) Navigator.pop(ctx);
                   },
                   child: Text(s.save),
@@ -292,12 +361,64 @@ class _RemindersScreenState extends State<RemindersScreen> {
                 )
               : ListView.builder(
                   padding: const EdgeInsets.all(20),
-                  itemCount: remState.reminders.length,
+                  itemCount: remState.reminders.length + 1,
                   itemBuilder: (ctx, i) {
+                    if (i == remState.reminders.length) {
+                      return Container(
+                        margin: const EdgeInsets.only(top: 8, bottom: 24),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.card(context),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: AppTheme.line(context)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.campaign_outlined, size: 20, color: Color(0xFF6B7280)),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    s.futureChannelsNote,
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF374151)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              children: [
+                                Chip(
+                                  avatar: const Text('💬', style: TextStyle(fontSize: 13)),
+                                  label: const Text('SMS (Soon)', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+                                  backgroundColor: Colors.grey.shade100,
+                                  side: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                Chip(
+                                  avatar: const Text('✉️', style: TextStyle(fontSize: 13)),
+                                  label: const Text('Email (Soon)', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+                                  backgroundColor: Colors.grey.shade100,
+                                  side: BorderSide(color: Colors.grey.shade300),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
                     final r = remState.reminders[i];
                     final isAfter = r.kind == 'AFTER_LAST';
                     final h = (r.intervalMinutes ?? 0) ~/ 60;
                     final timeFormatted = '${(r.timeOfDay ?? 0) ~/ 60}:${((r.timeOfDay ?? 0) % 60).toString().padLeft(2, '0')}';
+
+                    final modeMatch = RegExp(r'\[(NOTIFICATION|ALARM|BOTH)\]').firstMatch(r.title);
+                    final mode = modeMatch?.group(1) ?? 'BOTH';
+                    final cleanTitle = r.title.replaceAll(RegExp(r'\s*\[(NOTIFICATION|ALARM|BOTH)\]'), '');
 
                     final subText = isAfter
                         ? (s.isHe ? 'כל $h שעות לאחר הרישום האחרון' : 'Every ${h}h after last event')
@@ -331,9 +452,52 @@ class _RemindersScreenState extends State<RemindersScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  r.title,
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.ink(context)),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        cleanTitle,
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.ink(context)),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: mode == 'ALARM'
+                                            ? AppTheme.sunLight
+                                            : (mode == 'NOTIFICATION' ? AppTheme.skyLight : AppTheme.lavenderLight),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            mode == 'ALARM'
+                                                ? Icons.alarm_rounded
+                                                : (mode == 'NOTIFICATION' ? Icons.notifications_active_outlined : Icons.alarm_on_rounded),
+                                            size: 11,
+                                            color: mode == 'ALARM'
+                                                ? AppTheme.sun
+                                                : (mode == 'NOTIFICATION' ? AppTheme.sky : AppTheme.lavender),
+                                          ),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            mode == 'ALARM'
+                                                ? s.clockAlertOnly
+                                                : (mode == 'NOTIFICATION' ? s.notificationOnly : s.bothAlerts),
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: mode == 'ALARM'
+                                                ? AppTheme.sun
+                                                : (mode == 'NOTIFICATION' ? AppTheme.sky : AppTheme.lavender),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -364,7 +528,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                               if (isAfter) {
                                 await PhoneAlarm.setAlarmAfter(
                                   duration: Duration(hours: h > 0 ? h : 3),
-                                  message: '🍼 ${r.title} (${baby.name})',
+                                  message: '🍼 $cleanTitle (${baby.name})',
                                 );
                               } else {
                                 final hr = (r.timeOfDay ?? 600) ~/ 60;
@@ -372,7 +536,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                                 await PhoneAlarm.setAlarm(
                                   hour: hr,
                                   minute: mn,
-                                  message: '⏰ ${r.title} (${baby.name})',
+                                  message: '⏰ $cleanTitle (${baby.name})',
                                 );
                               }
                             },

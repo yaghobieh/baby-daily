@@ -264,10 +264,25 @@ class AppStrings {
   String get memberAddedAndNotified => tr(en: 'Member invited and notified by email!', he: 'השותף/ה הוזמן/ה וקיבל/ה אימייל!', es: '¡Miembro invitado por correo!', ru: 'Участник приглашен по электронной почте!');
   String get registeredEmailSent => tr(en: 'Registered successfully! An email with all details was sent.', he: 'הרשמתך הושלמה בהצלחה! נשלח אימייל עם כל הפרטים.', es: '¡Registrado con éxito!', ru: 'Регистрация успешна!');
   String get swipeRightToDeleteHint => tr(
-        en: 'Tip: Slide any item to the right to delete it',
-        he: 'טיפ: החלק/י פריט ימינה כדי למחוק אותו',
-        es: 'Consejo: Desliza un elemento a la derecha para eliminarlo',
-        ru: 'Совет: проведите по записи вправо, чтобы удалить её',
+        en: 'Tip: Slide right to delete • Slide left to pin',
+        he: 'טיפ: החלקה ימינה למחיקה • החלקה שמאלה לנעיצה',
+        es: 'Consejo: Desliza a la derecha para eliminar • a la izquierda para fijar',
+        ru: 'Совет: проведите вправо для удаления • влево для закрепления',
+      );
+  String get swipeTimelineHint => swipeRightToDeleteHint;
+  String get pin => tr(en: 'Pin', he: 'נעץ', es: 'Fijar', ru: 'Закрепить');
+  String get unpin => tr(en: 'Unpin', he: 'בטל נעיצה', es: 'Desfijar', ru: 'Открепить');
+  String get pinnedSuccess => tr(en: 'Pinned to top of timeline', he: 'ננעץ לראש ציר הזמן', es: 'Fijado al inicio', ru: 'Закреплено вверху ленты');
+  String get unpinnedSuccess => tr(en: 'Unpinned', he: 'הנעיצה בוטלה', es: 'Desfijado', ru: 'Откреплено');
+  String get deliveryChannel => tr(en: 'Alert Delivery', he: 'ערוץ התראה', es: 'Canal de alerta', ru: 'Способ оповещения');
+  String get notificationOnly => tr(en: 'Notification', he: 'התראה בלבד', es: 'Notificación', ru: 'Уведомление');
+  String get clockAlertOnly => tr(en: 'Clock Alert', he: 'שעון מעורר', es: 'Alarma de reloj', ru: 'Будильник');
+  String get bothAlerts => tr(en: 'Both (Notif & Clock)', he: 'התראה + שעון מעורר', es: 'Ambos (Notif. y reloj)', ru: 'Оба (Уведомление и будильник)');
+  String get futureChannelsNote => tr(
+        en: 'Future channels: SMS and Email notifications coming soon',
+        he: 'ערוצים עתידיים: התראות SMS ומייל בקרוב',
+        es: 'Próximamente: Notificaciones por SMS y correo',
+        ru: 'В разработке: оповещения по SMS и Email',
       );
 
   // Export & Social Share

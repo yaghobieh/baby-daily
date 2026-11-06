@@ -351,10 +351,10 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: s.language,
             onSelected: (lang) => localeState.setLocale(lang),
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 'he', child: Text('עברית')),
-              PopupMenuItem(value: 'en', child: Text('English')),
-              PopupMenuItem(value: 'es', child: Text('Español')),
               PopupMenuItem(value: 'ru', child: Text('Русский')),
+              PopupMenuItem(value: 'en', child: Text('English')),
+              PopupMenuItem(value: 'he', child: Text('עברית')),
+              PopupMenuItem(value: 'es', child: Text('Español')),
             ],
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -667,78 +667,119 @@ class _HomeScreenState extends State<HomeScreen> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
-                  s.swipeRightToDeleteHint,
+                  s.swipeTimelineHint,
                   style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
                 ),
               ),
               ...entryState.entries.map(
-                (e) => Dismissible(
-                  key: ValueKey('entry_${e.id}'),
-                  direction: DismissDirection.horizontal,
-                  background: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    decoration: BoxDecoration(
-                      color: AppTheme.danger,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    alignment: Alignment.centerLeft,
-                    child: Row(
-                      children: [
-                        const Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 26),
-                        const SizedBox(width: 8),
-                        Text(
-                          s.delete,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
+                (e) {
+                  final isPinned = entryState.isPinned(e.id);
+                  return Dismissible(
+                    key: ValueKey('entry_${e.id}'),
+                    direction: DismissDirection.horizontal,
+                    confirmDismiss: (direction) async {
+                      if (direction == DismissDirection.endToStart) {
+                        // Swiped LEFT: Pin / Unpin
+                        final messenger = ScaffoldMessenger.of(context);
+                        await entryState.togglePin(e.id);
+                        final nowPinned = entryState.isPinned(e.id);
+                        if (!mounted) return false;
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(
+                                  nowPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(nowPinned ? s.pinnedSuccess : s.unpinnedSuccess),
+                              ],
+                            ),
+                            backgroundColor: nowPinned ? const Color(0xFF8C7AE6) : const Color(0xFF6B7280),
+                            duration: const Duration(seconds: 2),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  secondaryBackground: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    decoration: BoxDecoration(
-                      color: AppTheme.danger,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    alignment: Alignment.centerRight,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          s.delete,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
+                        );
+                        return false; // Do not dismiss widget
+                      } else if (direction == DismissDirection.startToEnd) {
+                        // Swiped RIGHT: Delete
+                        final messenger = ScaffoldMessenger.of(context);
+                        final ok = await entryState.deleteEntry(baby.id, e.id);
+                        if (!mounted) return ok;
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(ok ? s.entryDeletedSuccess : s.errorOccurred),
+                            backgroundColor: ok ? AppTheme.mint : AppTheme.danger,
+                            duration: const Duration(seconds: 2),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 26),
-                      ],
-                    ),
-                  ),
-                  onDismissed: (_) async {
-                    final messenger = ScaffoldMessenger.of(context);
-                    final ok = await context.read<EntryState>().deleteEntry(baby.id, e.id);
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text(ok ? s.entryDeletedSuccess : s.errorOccurred),
-                        backgroundColor: ok ? AppTheme.mint : AppTheme.danger,
-                        duration: const Duration(seconds: 2),
+                        );
+                        return ok;
+                      }
+                      return false;
+                    },
+                    // Swiping RIGHT (startToEnd) -> Delete
+                    background: Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      decoration: BoxDecoration(
+                        color: AppTheme.danger,
+                        borderRadius: BorderRadius.circular(22),
                       ),
-                    );
-                  },
-                  child: EntryCard(
-                    entry: e,
-                    strings: s,
-                    onDelete: () => _confirmDeleteEntry(baby, e, s),
-                  ),
-                ),
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 26),
+                          const SizedBox(width: 8),
+                          Text(
+                            s.delete,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Swiping LEFT (endToStart) -> Pin / Unpin
+                    secondaryBackground: Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      decoration: BoxDecoration(
+                        color: isPinned ? const Color(0xFF6B7280) : const Color(0xFF8C7AE6),
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      alignment: Alignment.centerRight,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            isPinned ? s.unpin : s.pin,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ],
+                      ),
+                    ),
+                    child: EntryCard(
+                      entry: e,
+                      strings: s,
+                      isPinned: isPinned,
+                      onTogglePin: () => entryState.togglePin(e.id),
+                      onDelete: () => _confirmDeleteEntry(baby, e, s),
+                    ),
+                  );
+                },
               ),
             ],
           ],
@@ -833,15 +874,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Bottom Navigation Bar matching Screenshot 1: Home | Log | Stats | Settings
+  // Bottom Navigation Bar with smooth animated sliding indicator between tabs
   Widget _buildNavBar(BabyModel? currentBaby, AppStrings s) {
     final dark = AppTheme.isDark(context);
+    final isRtl = context.watch<LocaleState>().isHe;
     final items = <(IconData, String)>[
       (Icons.home_rounded, s.navHome),
       (Icons.assignment_outlined, s.tr(en: 'Log', he: 'רישום', es: 'Registrar', ru: 'Запись')),
       (Icons.bar_chart_rounded, s.tr(en: 'Stats', he: 'נתונים', es: 'Datos', ru: 'Сводка')),
       (Icons.settings_outlined, s.navSettings),
     ];
+    final activeColor = const Color(0xFFE68369);
+    final inactiveColor = dark ? Colors.white60 : const Color(0xFF4B4440);
 
     return Container(
       decoration: BoxDecoration(
@@ -857,49 +901,84 @@ class _HomeScreenState extends State<HomeScreen> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(items.length, (i) {
-              final selected = _tabIndex == i;
-              final item = items[i];
-              final activeColor = const Color(0xFFE68369);
-              final inactiveColor = dark ? Colors.white60 : const Color(0xFF4B4440);
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final tabWidth = constraints.maxWidth / items.length;
+              final selectedOffset = isRtl
+                  ? (items.length - 1 - _tabIndex) * tabWidth
+                  : _tabIndex * tabWidth;
 
-              return Expanded(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () {
-                    if (i == 1 && currentBaby != null) {
-                      LogEntrySheet.show(context, currentBaby.id, 'FEED');
-                    } else {
-                      setState(() => _tabIndex = i);
-                    }
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          item.$1,
-                          size: 25,
-                          color: selected ? activeColor : inactiveColor,
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          item.$2,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                            color: selected ? activeColor : inactiveColor,
+              return SizedBox(
+                height: 54,
+                child: Stack(
+                  children: [
+                    // Smooth animated sliding highlight indicator between selections
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.fastOutSlowIn,
+                      left: selectedOffset,
+                      top: 0,
+                      bottom: 0,
+                      width: tabWidth,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: activeColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: activeColor.withValues(alpha: 0.35),
+                            width: 1.2,
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    // Navigation tab buttons
+                    Row(
+                      children: List.generate(items.length, (i) {
+                        final selected = _tabIndex == i;
+                        final item = items[i];
+
+                        return Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () {
+                              if (i == 1 && currentBaby != null) {
+                                LogEntrySheet.show(context, currentBaby.id, 'FEED');
+                              } else {
+                                setState(() => _tabIndex = i);
+                              }
+                            },
+                            child: AnimatedScale(
+                              scale: selected ? 1.05 : 1.0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    item.$1,
+                                    size: 24,
+                                    color: selected ? activeColor : inactiveColor,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    item.$2,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                                      color: selected ? activeColor : inactiveColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
                 ),
               );
-            }),
+            },
           ),
         ),
       ),

@@ -1,10 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../models/entry.dart';
+import '../utils/app_storage.dart';
 
 class EntryState extends ChangeNotifier {
   final ApiClient api;
+
+  static const String _pinnedStorageKey = 'pinned_entry_ids';
+  Set<String> _pinnedEntryIds = {};
 
   List<EntryModel> _entries = [];
   DailySummaryModel _summary = DailySummaryModel();
@@ -17,9 +22,23 @@ class EntryState extends ChangeNotifier {
 
   EntryState(this.api);
 
-  List<EntryModel> get entries => _filterType == null
-      ? _entries
-      : _entries.where((e) => e.type == _filterType).toList();
+  bool isPinned(String entryId) => _pinnedEntryIds.contains(entryId);
+
+  List<EntryModel> get entries {
+    final list = _filterType == null
+        ? List<EntryModel>.from(_entries)
+        : _entries.where((e) => e.type == _filterType).toList();
+
+    list.sort((a, b) {
+      final aPinned = _pinnedEntryIds.contains(a.id);
+      final bPinned = _pinnedEntryIds.contains(b.id);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return b.startedAt.compareTo(a.startedAt);
+    });
+    return list;
+  }
+
   DailySummaryModel get summary => _summary;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -27,6 +46,32 @@ class EntryState extends ChangeNotifier {
   Duration get activeSleepDuration => _activeSleepDuration;
   bool get isSleeping => _summary.activeSleep != null;
   EntryModel? get activeSleep => _summary.activeSleep;
+
+  Future<void> _loadPinned() async {
+    try {
+      final raw = await AppStorage.getString(_pinnedStorageKey);
+      if (raw != null && raw.isNotEmpty) {
+        final List<dynamic> list = jsonDecode(raw);
+        _pinnedEntryIds = list.map((e) => e.toString()).toSet();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _savePinned() async {
+    try {
+      await AppStorage.setString(_pinnedStorageKey, jsonEncode(_pinnedEntryIds.toList()));
+    } catch (_) {}
+  }
+
+  Future<void> togglePin(String entryId) async {
+    if (_pinnedEntryIds.contains(entryId)) {
+      _pinnedEntryIds.remove(entryId);
+    } else {
+      _pinnedEntryIds.add(entryId);
+    }
+    await _savePinned();
+    notifyListeners();
+  }
 
   void setFilter(String? type) {
     _filterType = type;
@@ -39,6 +84,7 @@ class EntryState extends ChangeNotifier {
     notifyListeners();
 
     try {
+      await _loadPinned();
       final now = DateTime.now();
       final localMidnight = DateTime(now.year, now.month, now.day);
       final nextMidnight = localMidnight.add(const Duration(days: 1));
@@ -145,12 +191,14 @@ class EntryState extends ChangeNotifier {
   Future<bool> deleteEntry(String babyId, String entryId) async {
     final previous = List<EntryModel>.from(_entries);
     _entries.removeWhere((e) => e.id == entryId);
+    _pinnedEntryIds.remove(entryId);
     _error = null;
     notifyListeners();
+    await _savePinned();
 
     try {
       await api.delete('/entries/$entryId');
-      await loadForBaby(babyId);
+      await _refreshSummarySilently(babyId);
       return true;
     } catch (e) {
       _entries = previous;
@@ -158,6 +206,22 @@ class EntryState extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  Future<void> _refreshSummarySilently(String babyId) async {
+    try {
+      final now = DateTime.now();
+      final localMidnight = DateTime(now.year, now.month, now.day);
+      final nextMidnight = localMidnight.add(const Duration(days: 1));
+
+      final summaryRes = await api.get('/babies/$babyId/summary', {
+        'from': localMidnight.toUtc().toIso8601String(),
+        'to': nextMidnight.toUtc().toIso8601String(),
+      });
+      _summary = DailySummaryModel.fromJson(summaryRes as Map<String, dynamic>);
+      _checkSleepTimer();
+      notifyListeners();
+    } catch (_) {}
   }
 
   @override
