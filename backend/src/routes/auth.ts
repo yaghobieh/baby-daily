@@ -4,7 +4,7 @@ import { prisma } from '../db.js';
 import { badRequest, conflict, notFound, unauthorized } from '../lib/errors.js';
 import { normalizeEmail, normalizePhone, phoneKey } from '../lib/contact.js';
 import { toUserDto, uid } from '../lib/http.js';
-import { ForgotPasswordBody, LoginBody, RegisterBody, ResetPasswordBody, UpdateMeBody } from '../schemas.js';
+import { ForgotPasswordBody, GoogleAuthBody, LoginBody, RegisterBody, ResetPasswordBody, UpdateMeBody } from '../schemas.js';
 import { notifyUser } from '../services/notify.js';
 import { sendPasswordResetEmail, sendWelcomeEmail } from '../services/email.js';
 
@@ -14,41 +14,45 @@ export default async function authRoutes(app: FastifyInstance) {
   app.post('/auth/register', async (req, reply) => {
     const b = RegisterBody.parse(req.body);
     const email = normalizeEmail(b.email)!;
-    const pKey = phoneKey(b.phone);
+    const rawPKey = phoneKey(b.phone);
+
+    // Avoid P2002 unique constraint failure if phoneKey already belongs to another account
+    let safePKey: string | null = rawPKey;
+    if (rawPKey) {
+      const phoneOwner = await prisma.user.findUnique({ where: { phoneKey: rawPKey } });
+      if (phoneOwner && phoneOwner.email !== email) {
+        safePKey = null;
+      }
+    }
 
     const existing = await prisma.user.findUnique({ where: { email } });
     let user;
     if (existing) {
-      // If user was auto-created from an invitation, update their credentials
-      const isPlaceholder = await bcrypt.compare('baby123456', existing.passwordHash);
-      if (isPlaceholder) {
-        user = await prisma.user.update({
-          where: { id: existing.id },
-          data: {
-            name: b.name,
-            phone: normalizePhone(b.phone) ?? existing.phone,
-            phoneKey: pKey ?? existing.phoneKey,
-            passwordHash: await bcrypt.hash(b.password, 11),
-            locale: b.locale ?? 'en',
-            utcOffset: b.utcOffset ?? 0,
-          },
-        });
-      } else {
-        throw conflict('email_taken');
-      }
+      user = await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          name: b.name,
+          phone: normalizePhone(b.phone) ?? existing.phone,
+          phoneKey: safePKey ?? existing.phoneKey,
+          passwordHash: await bcrypt.hash(b.password, 11),
+          locale: b.locale ?? existing.locale ?? 'en',
+          utcOffset: b.utcOffset ?? existing.utcOffset ?? 0,
+        },
+      });
     } else {
       user = await prisma.user.create({
         data: {
           name: b.name,
           email,
           phone: normalizePhone(b.phone),
-          phoneKey: pKey,
+          phoneKey: safePKey,
           passwordHash: await bcrypt.hash(b.password, 11),
           locale: b.locale ?? 'en',
           utcOffset: b.utcOffset ?? 0,
         },
       });
     }
+    const pKey = safePKey;
 
     // Auto-claim any pending invitations for this email or phone
     const pendingInvites = await prisma.invitation.findMany({
@@ -122,6 +126,136 @@ export default async function authRoutes(app: FastifyInstance) {
     if (b.utcOffset != null && b.utcOffset !== user.utcOffset) {
       await prisma.user.update({ where: { id: user.id }, data: { utcOffset: b.utcOffset } });
     }
+    return { token: sign(user.id), user: toUserDto(user) };
+  });
+
+  // Proxy for google_sign_in_web's People API call using standard OIDC userinfo
+  app.get('/auth/google/people-proxy', async (req, reply) => {
+    const authHeader = req.headers.authorization;
+    const queryToken = typeof (req.query as any)?.access_token === 'string' ? (req.query as any).access_token : null;
+    const bearer = authHeader || (queryToken ? `Bearer ${queryToken}` : '');
+    if (!bearer) {
+      return reply.code(401).send({ error: 'unauthorized' });
+    }
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: bearer },
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      return reply.code(r.status).send(txt);
+    }
+    const u = (await r.json()) as {
+      sub?: string;
+      name?: string;
+      given_name?: string;
+      family_name?: string;
+      email?: string;
+      picture?: string;
+    };
+    return {
+      resourceName: `people/${u.sub || 'me'}`,
+      names: [
+        {
+          metadata: { primary: true },
+          displayName: u.name || u.email || 'Parent',
+          givenName: u.given_name || '',
+          familyName: u.family_name || '',
+        },
+      ],
+      emailAddresses: [
+        {
+          metadata: { primary: true },
+          value: u.email || '',
+        },
+      ],
+      photos: u.picture
+        ? [
+            {
+              metadata: { primary: true },
+              url: u.picture,
+            },
+          ]
+        : [],
+    };
+  });
+
+  app.post('/auth/google', async (req) => {
+    const b = GoogleAuthBody.parse(req.body);
+    let rawEmail = b.email;
+    let googleName = b.name?.trim();
+
+    // If a Google OAuth accessToken or idToken was provided, verify with Google
+    if (b.accessToken) {
+      const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${b.accessToken}` },
+      });
+      if (res.ok) {
+        const info = (await res.json()) as { email?: string; name?: string };
+        if (info.email) rawEmail = info.email;
+        if (info.name && !googleName) googleName = info.name;
+      }
+    } else if (b.idToken) {
+      const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(b.idToken)}`);
+      if (res.ok) {
+        const info = (await res.json()) as { email?: string; name?: string };
+        if (info.email) rawEmail = info.email;
+        if (info.name && !googleName) googleName = info.name;
+      }
+    }
+
+    const email = normalizeEmail(rawEmail);
+    if (!email) throw badRequest('email_required');
+
+    let user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      const defaultName = googleName || email.split('@')[0] || 'Parent';
+      user = await prisma.user.create({
+        data: {
+          name: defaultName,
+          email,
+          passwordHash: await bcrypt.hash(`google_${Date.now()}_${Math.random()}`, 11),
+          locale: b.locale ?? 'en',
+          utcOffset: b.utcOffset ?? 0,
+        },
+      });
+
+      // Auto-claim any pending invitations for this email
+      const pendingInvites = await prisma.invitation.findMany({
+        where: { status: 'PENDING', email },
+      });
+      for (const inv of pendingInvites) {
+        await prisma.$transaction([
+          prisma.babyMember.upsert({
+            where: { babyId_userId: { babyId: inv.babyId, userId: user.id } },
+            create: { babyId: inv.babyId, userId: user.id, role: inv.role, notifyEnabled: true },
+            update: { role: inv.role, notifyEnabled: true },
+          }),
+          prisma.invitation.update({
+            where: { id: inv.id },
+            data: { status: 'ACCEPTED', respondedAt: new Date() },
+          }),
+        ]);
+      }
+
+      // Ensure user has at least one baby profile
+      const memberCount = await prisma.babyMember.count({ where: { userId: user.id } });
+      if (memberCount === 0) {
+        await prisma.baby.create({
+          data: {
+            name: (b.locale ?? 'en') === 'he' ? 'התינוק/ת שלי' : 'My Baby',
+            birthDate: new Date(),
+            gender: 'boy',
+            avatarColor: '#FF7A7A',
+            members: {
+              create: { userId: user.id, role: 'OWNER', notifyEnabled: true },
+            },
+          },
+        });
+      }
+    } else if (b.utcOffset != null && b.utcOffset !== user.utcOffset) {
+      user = await prisma.user.update({ where: { id: user.id }, data: { utcOffset: b.utcOffset } });
+    }
+
     return { token: sign(user.id), user: toUserDto(user) };
   });
 

@@ -26,6 +26,7 @@ class EntryState extends ChangeNotifier {
   String? get filterType => _filterType;
   Duration get activeSleepDuration => _activeSleepDuration;
   bool get isSleeping => _summary.activeSleep != null;
+  EntryModel? get activeSleep => _summary.activeSleep;
 
   void setFilter(String? type) {
     _filterType = type;
@@ -99,12 +100,12 @@ class EntryState extends ChangeNotifier {
         if (endedAt != null) 'endedAt': endedAt.toUtc().toIso8601String(),
         'data': {
           ...data,
-          ?taggedUserId: taggedUserId,
-          ?taggedUserName: taggedUserName,
+          if (taggedUserId != null) 'taggedUserId': taggedUserId,
+          if (taggedUserName != null) 'taggedUserName': taggedUserName,
         },
         if (note != null && note.isNotEmpty) 'note': note,
-        ?taggedUserId: taggedUserId,
-        ?taggedUserName: taggedUserName,
+        if (taggedUserId != null) 'taggedUserId': taggedUserId,
+        if (taggedUserName != null) 'taggedUserName': taggedUserName,
       });
 
       await loadForBaby(babyId);
@@ -142,11 +143,17 @@ class EntryState extends ChangeNotifier {
   }
 
   Future<bool> deleteEntry(String babyId, String entryId) async {
+    final previous = List<EntryModel>.from(_entries);
+    _entries.removeWhere((e) => e.id == entryId);
+    _error = null;
+    notifyListeners();
+
     try {
       await api.delete('/entries/$entryId');
       await loadForBaby(babyId);
       return true;
     } catch (e) {
+      _entries = previous;
       _error = e.toString();
       notifyListeners();
       return false;

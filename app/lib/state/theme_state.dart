@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/app_storage.dart';
 
 class ThemeState extends ChangeNotifier {
   static const String _key = 'app_theme_color';
@@ -25,12 +25,11 @@ class ThemeState extends ChangeNotifier {
   ThemeMode get mode => _mode;
 
   Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedHex = prefs.getString(_key);
+    final savedHex = await AppStorage.getString(_key);
     if (savedHex != null) {
       setColorHex(savedHex, save: false);
     }
-    switch (prefs.getString(_modeKey)) {
+    switch (await AppStorage.getString(_modeKey)) {
       case 'light':
         _mode = ThemeMode.light;
       case 'dark':
@@ -43,7 +42,7 @@ class ThemeState extends ChangeNotifier {
   void setMode(ThemeMode mode) {
     _mode = mode;
     notifyListeners();
-    SharedPreferences.getInstance().then((p) => p.setString(_modeKey, mode.name));
+    AppStorage.setString(_modeKey, mode.name);
   }
 
   /// Flips between light and dark based on what is currently shown.
@@ -57,7 +56,7 @@ class ThemeState extends ChangeNotifier {
       notifyListeners();
 
       if (save) {
-        SharedPreferences.getInstance().then((prefs) => prefs.setString(_key, hex));
+        AppStorage.setString(_key, hex);
       }
     } catch (_) {}
   }

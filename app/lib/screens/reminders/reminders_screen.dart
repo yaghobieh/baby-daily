@@ -1,10 +1,10 @@
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../state/baby_state.dart';
 import '../../state/locale_state.dart';
 import '../../state/notification_state.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/phone_alarm.dart';
 
 class RemindersScreen extends StatefulWidget {
   const RemindersScreen({super.key});
@@ -198,16 +198,29 @@ class _RemindersScreenState extends State<RemindersScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     final remState = context.read<ReminderState>();
+                    final title = _titleController.text.trim();
                     await remState.createReminder(
                       babyId: baby.id,
                       kind: _kind,
-                      title: _titleController.text.trim(),
+                      title: title,
                       entryType: _kind == 'AFTER_LAST' ? _entryType : null,
                       intervalMinutes: _kind == 'AFTER_LAST' ? _intervalHours * 60 : null,
                       timeOfDay: _kind == 'DAILY_AT' ? _timeOfDay.hour * 60 + _timeOfDay.minute : null,
                       taggedUserId: _taggedUserId,
                       taggedUserName: _taggedUserName,
                     );
+                    if (_kind == 'AFTER_LAST') {
+                      await PhoneAlarm.setAlarmAfter(
+                        duration: Duration(hours: _intervalHours),
+                        message: '🍼 $title (${baby.name})',
+                      );
+                    } else {
+                      await PhoneAlarm.setAlarm(
+                        hour: _timeOfDay.hour,
+                        minute: _timeOfDay.minute,
+                        message: '⏰ $title (${baby.name})',
+                      );
+                    }
                     if (ctx.mounted) Navigator.pop(ctx);
                   },
                   child: Text(s.save),
@@ -345,14 +358,23 @@ class _RemindersScreenState extends State<RemindersScreen> {
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.chat_bubble_outline, size: 18, color: Color(0xFF25D366)),
-                            tooltip: s.shareWhatsApp,
-                            onPressed: () {
-                              final assigned = r.taggedUserName != null ? ' (עבור ${r.taggedUserName})' : '';
-                              final msg = s.isHe
-                                  ? '⏰ תזכורת בייבי דיילי: ${r.title}$assigned | $subText'
-                                  : '⏰ BabyDaily Reminder: ${r.title}$assigned | $subText';
-                              launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(msg)}'), mode: LaunchMode.externalApplication);
+                            icon: const Icon(Icons.alarm_on_rounded, size: 20, color: AppTheme.defaultPrimary),
+                            tooltip: s.setPhoneClockAlarm,
+                            onPressed: () async {
+                              if (isAfter) {
+                                await PhoneAlarm.setAlarmAfter(
+                                  duration: Duration(hours: h > 0 ? h : 3),
+                                  message: '🍼 ${r.title} (${baby.name})',
+                                );
+                              } else {
+                                final hr = (r.timeOfDay ?? 600) ~/ 60;
+                                final mn = (r.timeOfDay ?? 600) % 60;
+                                await PhoneAlarm.setAlarm(
+                                  hour: hr,
+                                  minute: mn,
+                                  message: '⏰ ${r.title} (${baby.name})',
+                                );
+                              }
                             },
                           ),
                           IconButton(

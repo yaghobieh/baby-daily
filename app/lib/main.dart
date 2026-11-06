@@ -13,23 +13,44 @@ import 'state/notification_state.dart';
 import 'state/theme_state.dart';
 import 'theme/app_theme.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      color: const Color(0xFFFFF9F4),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: Text(
+              'BabyDaily Error:\n${details.exceptionAsString()}',
+              style: const TextStyle(color: Color(0xFF2B2A3D), fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  };
+
   final apiClient = ApiClient();
-  await apiClient.init();
-
   final localeState = LocaleState();
-  await localeState.init();
-
   final themeState = ThemeState();
-  await themeState.init();
-
   final channelState = ChannelState();
-  await channelState.init();
-
   final authState = AuthState(apiClient);
-  await authState.init();
+
+  Future<void>(() async {
+    try {
+      await Future.wait([
+        apiClient.init(),
+        localeState.init(),
+        themeState.init(),
+        channelState.init(),
+      ]).timeout(const Duration(seconds: 4));
+    } catch (_) {}
+    await authState.init();
+  });
 
   runApp(
     MultiProvider(
@@ -68,16 +89,35 @@ class BabyDailyApp extends StatelessWidget {
       supportedLocales: const [
         Locale('en', ''),
         Locale('he', ''),
+        Locale('es', ''),
+        Locale('ru', ''),
       ],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: authState.isLoading
+      home: !authState.isInitialized
           ? const Scaffold(
+              backgroundColor: Color(0xFFFFF9F4),
               body: Center(
-                child: CircularProgressIndicator(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('👶', style: TextStyle(fontSize: 48)),
+                    SizedBox(height: 16),
+                    CircularProgressIndicator(color: Color(0xFFFF7A59)),
+                    SizedBox(height: 12),
+                    Text(
+                      'BabyDaily v0.1.4',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF8C8AA0),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             )
           : authState.isAuthenticated

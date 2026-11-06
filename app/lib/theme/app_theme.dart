@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -82,7 +83,12 @@ class AppTheme {
     final muted = dark ? mutedDark : mutedLight;
     final line = dark ? lineDark : lineLight;
 
-    final fontName = GoogleFonts.nunito().fontFamily;
+    String? fontName;
+    if (kIsWeb) {
+      try {
+        fontName = GoogleFonts.nunito().fontFamily;
+      } catch (_) {}
+    }
 
     final scheme = ColorScheme.fromSeed(seedColor: activePrimary, brightness: brightness).copyWith(
       primary: activePrimary,

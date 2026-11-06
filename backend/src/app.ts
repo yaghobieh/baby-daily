@@ -59,6 +59,51 @@ export async function buildApp() {
     return { ok: true, time: new Date().toISOString() };
   });
 
+  app.get('/privacy', async (req, reply) => {
+    reply.type('text/html; charset=utf-8');
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BabyDaily — Privacy Policy</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #2D3748; max-width: 760px; margin: 40px auto; padding: 0 20px; background: #FFF9F7; }
+    h1, h2 { color: #E53E3E; }
+    .card { background: white; padding: 32px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    footer { margin-top: 32px; font-size: 13px; color: #718096; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Privacy Policy for BabyDaily</h1>
+    <p><strong>Last Updated: October 31, 2026</strong></p>
+    <p>BabyDaily ("we", "our", or "us") provides a shared baby routine and activity tracker. We respect your privacy and are committed to protecting the personal information you share with us.</p>
+    
+    <h2>1. Information We Collect</h2>
+    <ul>
+      <li><strong>Account Details:</strong> Email address, name, and optional phone number when creating an account.</li>
+      <li><strong>Baby Routine Data:</strong> Feeding logs, sleep cycles, diaper changes, medications, growth measurements, and photos you choose to log.</li>
+      <li><strong>Caregiver Network:</strong> Names and contact information of invited family members or caregivers you authorize to view or edit baby routines.</li>
+    </ul>
+
+    <h2>2. How We Use Information</h2>
+    <p>We use your data solely to provide, synchronize, and improve BabyDaily services, including real-time family updates, smart routine reminders, and medical export reports.</p>
+
+    <h2>3. Data Sharing & Security</h2>
+    <p>We never sell your data or share your personal information with third-party advertising networks. Data is encrypted in transit and securely hosted on trusted cloud infrastructure.</p>
+
+    <h2>4. Account & Data Deletion</h2>
+    <p>You can delete your account or any baby profile and related logs directly from the app settings, or by contacting our support team at <strong>privacy@babydaily.app</strong>. All associated data will be permanently removed.</p>
+
+    <h2>5. Contact Us</h2>
+    <p>If you have any questions about this Privacy Policy, please contact us at support@babydaily.app.</p>
+  </div>
+  <footer>&copy; 2026 BabyDaily. All rights reserved.</footer>
+</body>
+</html>`;
+  });
+
   await app.register(authRoutes);
   await app.register(babyRoutes);
   await app.register(sharingRoutes);

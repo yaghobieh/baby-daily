@@ -19,6 +19,7 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="BabyDaily — Feeding, sleep & diapers — shared routine tracker.">
+  <meta name="google-signin-client_id" content="465653534147-2j97qb01btip30m5kqo02jglsgfuir98.apps.googleusercontent.com">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -31,6 +32,30 @@
 
   <title>BabyDaily — Baby Routine & Care Tracker</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    // Redirect google_sign_in_web's People API XHR/fetch requests to our OIDC userinfo proxy
+    // so Google Sign-In works without requiring the separate People API enabled in GCP.
+    (function() {
+      const proxyUrl = 'https://baby-daily-api.vercel.app/auth/google/people-proxy';
+      const origOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+        if (typeof url === 'string' && url.includes('people.googleapis.com/v1/people/me')) {
+          const qIdx = url.indexOf('?');
+          url = proxyUrl + (qIdx >= 0 ? url.substring(qIdx) : '');
+        }
+        return origOpen.call(this, method, url, ...rest);
+      };
+      const origFetch = window.fetch.bind(window);
+      window.fetch = function(input, init) {
+        const url = typeof input === 'string' ? input : (input && input.url) || '';
+        if (url.includes('people.googleapis.com/v1/people/me')) {
+          const qIdx = url.indexOf('?');
+          return origFetch(proxyUrl + (qIdx >= 0 ? url.substring(qIdx) : ''), init);
+        }
+        return origFetch(input, init);
+      };
+    })();
+  </script>
 </head>
 <body>
   <!--

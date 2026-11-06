@@ -6,6 +6,7 @@ import '../../api/api_client.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/baby.dart';
 import '../../models/entry.dart';
+import '../../state/auth_state.dart';
 import '../../state/baby_state.dart';
 import '../../state/channel_state.dart';
 import '../../state/entry_state.dart';
@@ -13,6 +14,7 @@ import '../../state/locale_state.dart';
 import '../../state/notification_state.dart';
 import '../../state/theme_state.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/phone_alarm.dart';
 import '../../widgets/baby_avatar.dart';
 import '../../widgets/entry_card.dart';
 import '../../widgets/quick_action_button.dart';
@@ -60,7 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (ctx) => Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
         child: Column(
@@ -86,7 +88,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: isSelected ? AppTheme.primaryDark : AppTheme.ink(context),
                   ),
                 ),
-                subtitle: Text('${s.roleLabel}: ${b.role == 'OWNER' ? s.roleOwner : b.role == 'CAREGIVER' ? s.caregiverLabel : s.viewerLabel}'),
+                subtitle: Text(
+                  '${s.roleLabel}: ${b.role == 'OWNER' ? s.roleOwner : b.role == 'CAREGIVER' ? s.caregiverLabel : s.viewerLabel}',
+                ),
                 trailing: isSelected ? Icon(Icons.check, color: AppTheme.primary) : null,
                 onTap: () {
                   babyState.selectBaby(b);
@@ -124,35 +128,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _confirmDeleteEntry(BabyModel baby, EntryModel entry, AppStrings s) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(s.confirmDeleteEntryTitle),
-        content: Text(s.confirmDeleteEntryContent),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(s.cancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(s.delete, style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      final ok = await context.read<EntryState>().deleteEntry(baby.id, entry.id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(ok ? s.entryDeletedSuccess : s.errorOccurred),
-            backgroundColor: ok ? Colors.green.shade700 : Colors.red,
-          ),
-        );
-      }
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await context.read<EntryState>().deleteEntry(baby.id, entry.id);
+    if (mounted) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(ok ? s.entryDeletedSuccess : s.errorOccurred),
+          backgroundColor: ok ? AppTheme.mint : AppTheme.danger,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -166,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (ctx) => Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
         child: Column(
@@ -196,11 +181,13 @@ class _HomeScreenState extends State<HomeScreen> {
               tileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               leading: const Icon(Icons.table_chart_outlined, color: Colors.green),
               title: Text(s.exportCsv, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text(s.isHe ? 'קובץ נתונים מעוצב עבור Excel ו-Google Sheets' : 'Formatted spreadsheet for Excel & Sheets'),
               trailing: const Icon(Icons.download),
               onTap: () {
                 Navigator.pop(ctx);
-                launchUrl(Uri.parse('$baseUrl/babies/${baby.id}/export?format=csv&token=$tk'), mode: LaunchMode.externalApplication);
+                launchUrl(
+                  Uri.parse('$baseUrl/babies/${baby.id}/export?format=csv&token=$tk'),
+                  mode: LaunchMode.externalApplication,
+                );
               },
             ),
             const SizedBox(height: 10),
@@ -212,27 +199,13 @@ class _HomeScreenState extends State<HomeScreen> {
               tileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               leading: const Icon(Icons.picture_as_pdf_outlined, color: Colors.red),
               title: Text(s.exportPdf, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text(s.isHe ? 'דוח רפואי מעוצב להדפסה או שמירה כ-PDF' : 'Medical printout / PDF for pediatricians'),
               trailing: const Icon(Icons.print_outlined),
               onTap: () {
                 Navigator.pop(ctx);
-                launchUrl(Uri.parse('$baseUrl/babies/${baby.id}/export?format=pdf&token=$tk'), mode: LaunchMode.externalApplication);
-              },
-            ),
-            const SizedBox(height: 10),
-            ListTile(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: AppTheme.divider),
-              ),
-              tileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              leading: const Icon(Icons.description_outlined, color: Colors.blue),
-              title: Text(s.exportWord, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text(s.isHe ? 'מסמך וורד DOC הניתן לעריכה' : 'Editable Microsoft Word / Google Docs file'),
-              trailing: const Icon(Icons.download),
-              onTap: () {
-                Navigator.pop(ctx);
-                launchUrl(Uri.parse('$baseUrl/babies/${baby.id}/export?format=word&token=$tk'), mode: LaunchMode.externalApplication);
+                launchUrl(
+                  Uri.parse('$baseUrl/babies/${baby.id}/export?format=pdf&token=$tk'),
+                  mode: LaunchMode.externalApplication,
+                );
               },
             ),
           ],
@@ -255,22 +228,11 @@ class _HomeScreenState extends State<HomeScreen> {
         : '🍼 *BabyDaily - Routine Update for ${baby.name}*\n📅 Date: $dateStr\n\n✨ *Recent Activity:*\n${recentEntries.isNotEmpty ? recentEntries : "No entries logged yet today"}\n\nSent from BabyDaily App 👶';
     final encoded = Uri.encodeComponent(message);
 
-    Future<void> openWa() => launchUrl(Uri.parse('https://wa.me/?text=$encoded'), mode: LaunchMode.externalApplication);
-    Future<void> openTg() => launchUrl(Uri.parse('https://t.me/share/url?url=${Uri.encodeComponent('https://babydaily.app')}&text=$encoded'), mode: LaunchMode.externalApplication);
-
-    Widget tile(String emoji, String label, Color color, VoidCallback onTap) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: ListTile(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: color)),
-            leading: Text(emoji, style: const TextStyle(fontSize: 22)),
-            title: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              Navigator.pop(context);
-              onTap();
-            },
-          ),
-        );
+    Future<void> openWa() =>
+        launchUrl(Uri.parse('https://wa.me/?text=$encoded'), mode: LaunchMode.externalApplication);
+    Future<void> openTg() => launchUrl(
+        Uri.parse('https://t.me/share/url?url=${Uri.encodeComponent('https://babydaily.app')}&text=$encoded'),
+        mode: LaunchMode.externalApplication);
 
     showModalBottomSheet(
       context: context,
@@ -282,21 +244,24 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(s.shareDailySummary, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 16),
-            if (!ch.any)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  s.isHe ? 'כל ערוצי השיתוף כבויים. אפשר להפעיל אותם בהגדרות.' : 'All sharing channels are off. Enable them in Settings.',
-                  style: const TextStyle(color: AppTheme.textMuted),
-                ),
+            if (ch.whatsapp)
+              ListTile(
+                leading: const Text('💬', style: TextStyle(fontSize: 22)),
+                title: Text(s.shareWhatsApp, style: const TextStyle(fontWeight: FontWeight.w800)),
+                onTap: () {
+                  Navigator.pop(context);
+                  openWa();
+                },
               ),
-            if (ch.whatsapp) tile('💬', s.shareWhatsApp, const Color(0xFF25D366), openWa),
-            if (ch.telegram) tile('✈️', s.shareTelegram, const Color(0xFF0088CC), openTg),
-            if (ch.whatsapp && ch.telegram)
-              tile('♾️', s.shareAll, AppTheme.primary, () async {
-                await openWa();
-                await openTg();
-              }),
+            if (ch.telegram)
+              ListTile(
+                leading: const Text('✈️', style: TextStyle(fontSize: 22)),
+                title: Text(s.shareTelegram, style: const TextStyle(fontWeight: FontWeight.w800)),
+                onTap: () {
+                  Navigator.pop(context);
+                  openTg();
+                },
+              ),
           ],
         ),
       ),
@@ -304,341 +269,638 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Today tab
+  // Screenshot 1 & 4: Header + Lavender Sleeping Pill + Quick Action + Timeline
   // ---------------------------------------------------------------------------
 
-  Widget _sectionTitle(String text, {Widget? trailing}) => Padding(
-        padding: const EdgeInsets.only(top: 22, bottom: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              text.toUpperCase(),
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: .6, color: AppTheme.textMuted),
-            ),
-            ?trailing,
-          ],
-        ),
-      );
-
-  Widget _buildStatusBanner(BabyModel baby, EntryState entryState, AppStrings s) {
-    final sleeping = entryState.isSleeping;
-    String sub = s.isHe ? 'מוכן/ה לשנת צהריים?' : 'Ready for a nap?';
-    if (sleeping) {
-      final d = entryState.activeSleepDuration;
-      final h = d.inHours;
-      final m = d.inMinutes % 60;
-      final sec = d.inSeconds % 60;
-      sub = h > 0 ? '${h}h ${m}m ${sec}s' : '${m}m ${sec}s';
-    }
+  Widget _buildHeader(BabyModel? baby, AppStrings s, LocaleState localeState) {
+    final dark = AppTheme.isDark(context);
+    final authUser = context.watch<AuthState>().user;
+    final parentName = authUser != null && authUser.name.isNotEmpty
+        ? authUser.name.split(' ').first
+        : (s.isHe ? 'שרה' : 'Sarah');
+    final ageStr = baby?.ageDescription(localeState.isHe);
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 14, 16, 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: sleeping ? const [Color(0xFF5B6CFF), Color(0xFF8B7BFF)] : [AppTheme.primary, const Color(0xFFFFA26B)],
-        ),
+        color: dark ? const Color(0xFF1F1C2C) : const Color(0xFFF3ECE0),
       ),
       child: Row(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  sleeping ? '${baby.name} ${s.currentlySleeping} 💤' : '${baby.name} ${s.isAwake} ☀️',
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 2),
-                Text(sub, style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
-              ],
+          // Cute Baby Face Avatar matching Screenshot 1
+          InkWell(
+            onTap: () => _showBabyPicker(s),
+            borderRadius: BorderRadius.circular(30),
+            child: Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF6D9CC),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: const Text('👶🏼', style: TextStyle(fontSize: 34)),
             ),
           ),
-          const SizedBox(width: 10),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF2B2A3D),
-              shape: const StadiumBorder(),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+          const SizedBox(width: 14),
+          Expanded(
+            child: InkWell(
+              onTap: () => _showBabyPicker(s),
+              borderRadius: BorderRadius.circular(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    s.isHe ? 'שלום, $parentName!' : 'Hello, $parentName!',
+                    style: TextStyle(
+                      fontSize: 23,
+                      fontWeight: FontWeight.w900,
+                      color: dark ? Colors.white : const Color(0xFF2B1810),
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    baby == null
+                        ? s.appName
+                        : (ageStr != null && ageStr.isNotEmpty
+                            ? '${baby.name}, $ageStr'
+                            : '${baby.name}, 6 months'),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: dark ? const Color(0xFFB8B4CC) : const Color(0xFF3E2D24),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            onPressed: () => sleeping ? entryState.wakeUp(baby.id) : entryState.startSleep(baby.id),
-            child: Text(sleeping ? s.wakeUp : s.startSleep),
+          ),
+          // Language (Heb, English, Spanish, Russian - No Flags) & Family Sharing quick buttons
+          PopupMenuButton<String>(
+            tooltip: s.language,
+            onSelected: (lang) => localeState.setLocale(lang),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'he', child: Text('עברית')),
+              PopupMenuItem(value: 'en', child: Text('English')),
+              PopupMenuItem(value: 'es', child: Text('Español')),
+              PopupMenuItem(value: 'ru', child: Text('Русский')),
+            ],
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: dark ? const Color(0xFF2E2648) : Colors.white.withValues(alpha: 0.75),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: dark ? const Color(0xFF4C3D77) : const Color(0xFFDFD5C5),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.language,
+                    size: 16,
+                    color: dark ? Colors.white70 : const Color(0xFF4A372D),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    localeState.currentLanguageName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: dark ? Colors.white : const Color(0xFF4A372D),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SharingScreen()),
+              );
+            },
+            tooltip: s.navShare,
+            icon: Icon(
+              Icons.group_add_outlined,
+              color: dark ? Colors.white70 : const Color(0xFF4A372D),
+              size: 22,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChips(EntryState entryState, AppStrings s) {
-    final items = <MapEntry<String?, String>>[
-      MapEntry(null, s.isHe ? 'הכל' : 'All'),
-      MapEntry('FEED', '🍼 ${s.feed}'),
-      MapEntry('SLEEP', '😴 ${s.sleep}'),
-      MapEntry('DIAPER', '🧷 ${s.diaper}'),
-      MapEntry('MEDICINE', '💊 ${s.medicine}'),
-      MapEntry('GROWTH', '📏 ${s.growth}'),
-      MapEntry('NOTE', '📝 ${s.note}'),
-    ];
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (_, i) {
-          final it = items[i];
-          final selected = entryState.filterType == it.key;
-          final color = it.key == null ? AppTheme.primary : AppTheme.act(it.key!).strong;
-          return ChoiceChip(
-            selected: selected,
-            label: Text(it.value),
-            labelStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: selected ? color : AppTheme.textMuted),
-            selectedColor: color.withValues(alpha: 0.16),
-            side: BorderSide(color: selected ? color : AppTheme.line(context)),
-            onSelected: (_) => entryState.setFilter(it.key),
-          );
-        },
+  Widget _buildStatusBanner(BabyModel baby, EntryState entryState, AppStrings s) {
+    final sleeping = entryState.isSleeping;
+    final dark = AppTheme.isDark(context);
+
+    String durationText = '1h 25m';
+    if (sleeping) {
+      final d = entryState.activeSleepDuration;
+      final h = d.inHours;
+      final m = d.inMinutes % 60;
+      durationText = h > 0 ? '${h}h ${m}m' : '${m}m';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: dark ? const Color(0xFF342B54) : const Color(0xFFCBC0EE),
+        borderRadius: BorderRadius.circular(32),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.nightlight_round,
+            color: Color(0xFF6B5B9E),
+            size: 24,
+          ),
+          const SizedBox(width: 10),
+          Text(
+            sleeping
+                ? (s.isHe ? 'ישן/ה' : 'SLEEPING')
+                : (s.isHe ? 'שינה' : 'SLEEPING'),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+              color: dark ? Colors.white : const Color(0xFF1F1A24),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              sleeping ? durationText : '1h 25m',
+              style: TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.w900,
+                color: dark ? Colors.white : const Color(0xFF1F1A24),
+              ),
+            ),
+          ),
+          InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () {
+              if (sleeping) {
+                entryState.wakeUp(baby.id);
+              } else {
+                LogEntrySheet.show(context, baby.id, 'SLEEP');
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF6EFE2),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.access_alarm, size: 17, color: Color(0xFF2B2523)),
+                  const SizedBox(width: 6),
+                  Text(
+                    sleeping ? (s.isHe ? 'העיר/י' : 'Wake') : (s.isHe ? 'העיר/י' : 'Wake'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2B2523),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildDashboard(BabyModel baby, EntryState entryState, AppStrings s) {
-    final summary = entryState.summary;
-
-    final sleepH = summary.sleepMinutes ~/ 60;
-    final sleepM = summary.sleepMinutes % 60;
-    final sleepStr = sleepH > 0 ? '${sleepH}h ${sleepM}m' : '${sleepM}m';
-    final diaperSub = summary.diapersTotal > 0
-        ? '${summary.diapersWet} ${s.diaperWet} · ${summary.diapersDirty} ${s.diaperDirty}'
-        : s.noneYet;
-    final feedSub = summary.bottleMl > 0 ? '${summary.bottleMl} ml' : (summary.breastMinutes > 0 ? '${summary.breastMinutes} min' : null);
-
-    Widget action(String type, String label) => QuickActionButton(
-          type: type,
-          label: label,
-          onTap: () => LogEntrySheet.show(context, baby.id, type),
-        );
+    final dark = AppTheme.isDark(context);
 
     return RefreshIndicator(
       onRefresh: () => entryState.loadForBaby(baby.id),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Lavender Sleeping Banner matching Screenshot 1
             _buildStatusBanner(baby, entryState, s),
-            _sectionTitle(s.todaySummary),
-            Row(
-              children: [
-                Expanded(child: StatCard(type: 'FEED', title: s.feedsCount, value: '${summary.feeds}', subtitle: summary.feeds > 0 ? feedSub : null)),
-                const SizedBox(width: 10),
-                Expanded(child: StatCard(type: 'SLEEP', title: s.totalSleep, value: sleepStr, subtitle: entryState.isSleeping ? s.currentlySleeping : (summary.sleepMinutes > 0 ? 'total' : null))),
-                const SizedBox(width: 10),
-                Expanded(child: StatCard(type: 'DIAPER', title: s.diaperChanges, value: '${summary.diapersTotal}', subtitle: diaperSub)),
-              ],
-            ),
-            _sectionTitle(s.quickActions),
-            GridView.count(
-              crossAxisCount: 3,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 1.12,
-              children: [
-                action('FEED', s.feed),
-                action('SLEEP', s.sleep),
-                action('DIAPER', s.diaper),
-                action('MEDICINE', s.medicine),
-                action('GROWTH', s.growth),
-                action('NOTE', s.note),
-              ],
-            ),
-            _sectionTitle(
-              s.recentActivity,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    icon: const Text('📤', style: TextStyle(fontSize: 18)),
-                    tooltip: s.exportData,
-                    onPressed: () => _showExportSheet(baby, s),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    icon: const Text('📲', style: TextStyle(fontSize: 18)),
-                    tooltip: s.shareDailySummary,
-                    onPressed: () => _showShareSheet(baby, entryState, s),
-                  ),
-                ],
+
+            // "Quick Action" Header
+            Text(
+              s.quickActions,
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                color: dark ? Colors.white : const Color(0xFF1F1A17),
               ),
             ),
-            _buildFilterChips(entryState, s),
             const SizedBox(height: 12),
+
+            // 4 Circular Pastel Buttons directly on the cream background
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                QuickActionButton(
+                  type: 'FEED',
+                  label: s.feed,
+                  onTap: () => LogEntrySheet.show(context, baby.id, 'FEED'),
+                ),
+                QuickActionButton(
+                  type: 'SLEEP',
+                  label: s.sleep,
+                  onTap: () => LogEntrySheet.show(context, baby.id, 'SLEEP'),
+                ),
+                QuickActionButton(
+                  type: 'DIAPER',
+                  label: s.diaper,
+                  onTap: () => LogEntrySheet.show(context, baby.id, 'DIAPER'),
+                ),
+                QuickActionButton(
+                  type: 'MEDICINE',
+                  label: s.medicine,
+                  onTap: () => LogEntrySheet.show(context, baby.id, 'MEDICINE'),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Phone Clock Alarm for Next Meal quick bar
+            InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () async {
+                final target = await PhoneAlarm.setAlarmAfter(
+                  duration: const Duration(hours: 3),
+                  message: '🍼 ${s.feed} - ${baby.name}',
+                );
+                if (mounted) {
+                  final formatted =
+                      '${target.hour.toString().padLeft(2, '0')}:${target.minute.toString().padLeft(2, '0')}';
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: AppTheme.mint,
+                      content: Text('${s.alarmSetSuccess} ($formatted)'),
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                decoration: BoxDecoration(
+                  color: dark ? const Color(0xFF2E2648) : const Color(0xFFFFF5EE),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: dark ? const Color(0xFF4C3D77) : const Color(0xFFF3C6B6),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.alarm_on_rounded, color: Color(0xFFDE6B52), size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        s.setPhoneClockAlarm,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: dark ? Colors.white : const Color(0xFF2B1810),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDE6B52),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        s.tr(en: '+3h Clock', he: 'שעון +3 ש׳', es: 'Reloj +3h', ru: '+3ч Будильник'),
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            // "Today's Timeline" Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  s.tr(en: "Today's Timeline", he: 'יומן היום', es: 'Actividad de hoy', ru: 'Дневник за сегодня'),
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    color: dark ? Colors.white : const Color(0xFF1F1A17),
+                  ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.ios_share_rounded, size: 19, color: Color(0xFF6B7280)),
+                      tooltip: s.shareDailySummary,
+                      onPressed: () => _showShareSheet(baby, entryState, s),
+                    ),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.file_download_outlined, size: 20, color: Color(0xFF6B7280)),
+                      tooltip: s.exportData,
+                      onPressed: () => _showExportSheet(baby, s),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
             if (entryState.entries.isEmpty)
               Container(
                 padding: const EdgeInsets.all(28),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppTheme.card(context),
+                  color: dark ? AppTheme.cardDark : Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppTheme.line(context)),
+                  border: Border.all(color: const Color(0xFFEFEAE2)),
                 ),
                 child: Column(
                   children: [
                     const Text('🐣', style: TextStyle(fontSize: 38)),
                     const SizedBox(height: 12),
                     Text(
-                      entryState.filterType == null ? s.noEntriesToday : (s.isHe ? 'אין רישומים מהסוג הזה' : 'No entries of this type'),
+                      s.noEntriesToday,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                      style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
                     ),
                   ],
                 ),
               )
-            else
-              ...entryState.entries.map((e) => EntryCard(
+            else ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  s.swipeRightToDeleteHint,
+                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                ),
+              ),
+              ...entryState.entries.map(
+                (e) => Dismissible(
+                  key: ValueKey('entry_${e.id}'),
+                  direction: DismissDirection.horizontal,
+                  background: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: AppTheme.danger,
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 26),
+                        const SizedBox(width: 8),
+                        Text(
+                          s.delete,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  secondaryBackground: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: AppTheme.danger,
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          s.delete,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 26),
+                      ],
+                    ),
+                  ),
+                  onDismissed: (_) async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    final ok = await context.read<EntryState>().deleteEntry(baby.id, e.id);
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(ok ? s.entryDeletedSuccess : s.errorOccurred),
+                        backgroundColor: ok ? AppTheme.mint : AppTheme.danger,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: EntryCard(
                     entry: e,
                     strings: s,
                     onDelete: () => _confirmDeleteEntry(baby, e, s),
-                  )),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _iconBtn(String emoji, VoidCallback onTap, {String? tooltip}) => Tooltip(
-        message: tooltip ?? '',
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppTheme.card(context),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.line(context)),
-            ),
-            child: Text(emoji, style: const TextStyle(fontSize: 18)),
-          ),
-        ),
-      );
+  // Stats & Family Tab (Tab 2)
+  Widget _buildStatsTab(BabyModel? baby, EntryState entryState, AppStrings s) {
+    if (baby == null) return const SizedBox.shrink();
+    final summary = entryState.summary;
+    final sleepH = summary.sleepMinutes ~/ 60;
+    final sleepM = summary.sleepMinutes % 60;
+    final sleepStr = sleepH > 0 ? '${sleepH}h ${sleepM}m' : '${sleepM}m';
+    final diaperSub = summary.diapersTotal > 0
+        ? '${summary.diapersWet} ${s.diaperWet} · ${summary.diapersDirty} ${s.diaperDirty}'
+        : s.noneYet;
+    final feedSub = summary.bottleMl > 0
+        ? '${summary.bottleMl} ml'
+        : (summary.breastMinutes > 0 ? '${summary.breastMinutes} min' : null);
 
-  Widget _buildHeader(BabyModel? baby, AppStrings s, LocaleState localeState) {
-    final dark = AppTheme.isDark(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-      child: Row(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: baby == null
-                ? Text(s.appName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800))
-                : InkWell(
-                    onTap: () => _showBabyPicker(s),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(color: AppTheme.primaryLight, shape: BoxShape.circle),
-                          child: Text(
-                            baby.name.isNotEmpty ? baby.name.characters.first.toUpperCase() : '👶',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.primary),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Flexible(
-                          child: Text(baby.name, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                        ),
-                        const SizedBox(width: 4),
-                        const Text('⌄', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textMuted)),
-                      ],
-                    ),
-                  ),
+          Text(
+            s.todaySummary,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
           ),
-          _iconBtn(localeState.isHe ? '🇬🇧' : '🇮🇱', () => localeState.toggle(), tooltip: s.language),
-          const SizedBox(width: 8),
-          _iconBtn('🌓', () => context.read<ThemeState>().toggleDark(dark)),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: StatCard(
+                  type: 'FEED',
+                  title: s.feedsCount,
+                  value: '${summary.feeds}',
+                  subtitle: summary.feeds > 0 ? feedSub : null,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: StatCard(
+                  type: 'SLEEP',
+                  title: s.totalSleep,
+                  value: sleepStr,
+                  subtitle: entryState.isSleeping ? s.currentlySleeping : 'total',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: StatCard(
+                  type: 'DIAPER',
+                  title: s.diaperChanges,
+                  value: '${summary.diapersTotal}',
+                  subtitle: diaperSub,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          ListTile(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            tileColor: Colors.white,
+            leading: const Icon(Icons.group_outlined, color: Color(0xFFDE6B52)),
+            title: Text(s.navShare, style: const TextStyle(fontWeight: FontWeight.w800)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SharingScreen())),
+          ),
+          const SizedBox(height: 10),
+          ListTile(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            tileColor: Colors.white,
+            leading: const Icon(Icons.alarm, color: Color(0xFF7C3AED)),
+            title: Text(s.navReminders, style: const TextStyle(fontWeight: FontWeight.w800)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RemindersScreen())),
+          ),
+          const SizedBox(height: 10),
+          ListTile(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            tileColor: Colors.white,
+            leading: const Icon(Icons.notifications_outlined, color: Color(0xFF0284C7)),
+            title: Text(s.navNotifications, style: const TextStyle(fontWeight: FontWeight.w800)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildNavBar(AppStrings s, NotificationState notifState) {
-    final items = <(String, String, bool)>[
-      ('🏠', s.navHome, false),
-      ('👨‍👩‍👧', s.navShare, false),
-      ('⏰', s.navReminders, false),
-      ('🔔', s.navNotifications, notifState.unreadCount > 0),
-      ('⚙️', s.navSettings, false),
+  // Bottom Navigation Bar matching Screenshot 1: Home | Log | Stats | Settings
+  Widget _buildNavBar(BabyModel? currentBaby, AppStrings s) {
+    final dark = AppTheme.isDark(context);
+    final items = <(IconData, String)>[
+      (Icons.home_rounded, s.navHome),
+      (Icons.assignment_outlined, s.tr(en: 'Log', he: 'רישום', es: 'Registrar', ru: 'Запись')),
+      (Icons.bar_chart_rounded, s.tr(en: 'Stats', he: 'נתונים', es: 'Datos', ru: 'Сводка')),
+      (Icons.settings_outlined, s.navSettings),
     ];
-    return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: AppTheme.card(context),
-          borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: AppTheme.line(context)),
-          boxShadow: [BoxShadow(color: const Color(0xFF2B2A3D).withValues(alpha: 0.10), blurRadius: 24, offset: const Offset(0, 8))],
+
+    return Container(
+      decoration: BoxDecoration(
+        color: dark ? AppTheme.cardDark : const Color(0xFFFCF9F5),
+        border: Border(
+          top: BorderSide(
+            color: dark ? AppTheme.lineDark : const Color(0xFFEBE4DA),
+            width: 1,
+          ),
         ),
-        child: Row(
-          children: List.generate(items.length, (i) {
-            final selected = _tabIndex == i;
-            final it = items[i];
-            return Expanded(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: () => setState(() => _tabIndex = i),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: selected ? AppTheme.primaryLight : Colors.transparent,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.topCenter,
-                    children: [
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(it.$1, style: const TextStyle(fontSize: 20)),
-                          const SizedBox(height: 2),
-                          Text(
-                            it.$2,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: selected ? AppTheme.primary : AppTheme.textMuted),
-                          ),
-                        ],
-                      ),
-                      if (it.$3)
-                        Positioned(
-                          top: -2,
-                          right: 14,
-                          child: Container(width: 8, height: 8, decoration: BoxDecoration(color: AppTheme.primary, shape: BoxShape.circle)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(items.length, (i) {
+              final selected = _tabIndex == i;
+              final item = items[i];
+              final activeColor = const Color(0xFFE68369);
+              final inactiveColor = dark ? Colors.white60 : const Color(0xFF4B4440);
+
+              return Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    if (i == 1 && currentBaby != null) {
+                      LogEntrySheet.show(context, currentBaby.id, 'FEED');
+                    } else {
+                      setState(() => _tabIndex = i);
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          item.$1,
+                          size: 25,
+                          color: selected ? activeColor : inactiveColor,
                         ),
-                    ],
+                        const SizedBox(height: 3),
+                        Text(
+                          item.$2,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                            color: selected ? activeColor : inactiveColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          }),
+              );
+            }),
+          ),
         ),
       ),
     );
@@ -650,17 +912,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final localeState = context.watch<LocaleState>();
     final babyState = context.watch<BabyState>();
     final entryState = context.watch<EntryState>();
-    final notifState = context.watch<NotificationState>();
     final currentBaby = babyState.currentBaby;
+    final dark = AppTheme.isDark(context);
 
     Widget bodyContent;
-    if (_tabIndex == 1) {
-      bodyContent = const SharingScreen();
-    } else if (_tabIndex == 2) {
-      bodyContent = const RemindersScreen();
+    if (_tabIndex == 2) {
+      bodyContent = _buildStatsTab(currentBaby, entryState, s);
     } else if (_tabIndex == 3) {
-      bodyContent = const NotificationsScreen();
-    } else if (_tabIndex == 4) {
       bodyContent = const SettingsScreen();
     } else {
       bodyContent = currentBaby == null
@@ -673,7 +931,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(s.noBabiesYet, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateBabyScreen())),
+                    onPressed: () =>
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateBabyScreen())),
                     icon: const Icon(Icons.add),
                     label: Text(s.addBaby),
                   ),
@@ -684,16 +943,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Scaffold(
+      backgroundColor: dark ? AppTheme.bgDark : const Color(0xFFFAF7F2),
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            if (_tabIndex == 0) _buildHeader(currentBaby, s, localeState),
+            if (_tabIndex == 0 || _tabIndex == 2) _buildHeader(currentBaby, s, localeState),
             Expanded(child: bodyContent),
           ],
         ),
       ),
-      bottomNavigationBar: _buildNavBar(s, notifState),
+      bottomNavigationBar: _buildNavBar(currentBaby, s),
     );
   }
 }

@@ -130,12 +130,12 @@ class ReminderState extends ChangeNotifier {
       await api.post('/babies/$babyId/reminders', {
         'kind': kind,
         'title': title,
-        'entryType': ?entryType,
-        'intervalMinutes': ?intervalMinutes,
-        'timeOfDay': ?timeOfDay,
+        if (entryType != null) 'entryType': entryType,
+        if (intervalMinutes != null) 'intervalMinutes': intervalMinutes,
+        if (timeOfDay != null) 'timeOfDay': timeOfDay,
         'utcOffset': DateTime.now().timeZoneOffset.inMinutes,
-        ?taggedUserId: taggedUserId,
-        ?taggedUserName: taggedUserName,
+        if (taggedUserId != null) 'taggedUserId': taggedUserId,
+        if (taggedUserName != null) 'taggedUserName': taggedUserName,
       });
 
       await loadForBaby(babyId);

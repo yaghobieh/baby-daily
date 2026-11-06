@@ -24,6 +24,15 @@ export const LoginBody = z.object({
   utcOffset: z.number().int().min(-840).max(840).optional(),
 });
 
+export const GoogleAuthBody = z.object({
+  email: z.email().max(200).optional(),
+  name: z.string().trim().min(1).max(80).optional(),
+  idToken: z.string().optional(),
+  accessToken: z.string().optional(),
+  locale: z.enum(['en', 'he']).optional(),
+  utcOffset: z.number().int().min(-840).max(840).optional(),
+});
+
 export const UpdateMeBody = z.object({
   name: z.string().trim().min(1).max(80).transform(formatName).optional(),
   phone: z.string().trim().max(30).nullable().optional(),
@@ -51,14 +60,23 @@ export const TestNotifyBody = z.object({
 
 // ---------- Entries ----------
 export const EntryData = {
-  FEED: z.object({
-    method: z.enum(['breast', 'bottle', 'solids']),
-    side: z.enum(['left', 'right', 'both']).optional(),
-    amountMl: z.number().min(0).max(1000).optional(),
-    food: z.string().max(200).optional(),
-  }),
+  FEED: z
+    .object({
+      method: z.enum(['breast', 'bottle', 'solids']),
+      side: z.enum(['left', 'right', 'both']).optional(),
+      amountMl: z.number().min(0).max(1000).optional(),
+      milkType: z.string().max(60).optional(),
+      durationMinutes: z.number().min(0).max(600).optional(),
+      food: z.string().max(200).optional(),
+    })
+    .passthrough(),
   SLEEP: z.object({}).passthrough(),
-  DIAPER: z.object({ kind: z.enum(['wet', 'dirty', 'mixed', 'dry']) }),
+  DIAPER: z
+    .object({
+      kind: z.enum(['wet', 'dirty', 'mixed', 'dry']),
+      stoolTexture: z.string().max(60).optional(),
+    })
+    .passthrough(),
   GROWTH: z
     .object({
       weightKg: z.number().min(0).max(50).optional(),

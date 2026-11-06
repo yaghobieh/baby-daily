@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/app_storage.dart';
 
 /// Which messaging channels the user wants to see for sharing / notifications.
 class ChannelState extends ChangeNotifier {
@@ -14,20 +14,19 @@ class ChannelState extends ChangeNotifier {
   bool get any => _whatsapp || _telegram;
 
   Future<void> init() async {
-    final p = await SharedPreferences.getInstance();
-    _whatsapp = p.getBool(_wa) ?? true;
-    _telegram = p.getBool(_tg) ?? true;
+    _whatsapp = await AppStorage.getBool(_wa) ?? true;
+    _telegram = await AppStorage.getBool(_tg) ?? true;
   }
 
   Future<void> setWhatsapp(bool v) async {
     _whatsapp = v;
     notifyListeners();
-    (await SharedPreferences.getInstance()).setBool(_wa, v);
+    await AppStorage.setBool(_wa, v);
   }
 
   Future<void> setTelegram(bool v) async {
     _telegram = v;
     notifyListeners();
-    (await SharedPreferences.getInstance()).setBool(_tg, v);
+    await AppStorage.setBool(_tg, v);
   }
 }

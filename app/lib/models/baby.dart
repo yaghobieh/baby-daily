@@ -20,6 +20,18 @@ class BabyModel {
   bool get isOwner => role == 'OWNER';
   bool get canLog => role == 'OWNER' || role == 'CAREGIVER';
 
+  String ageDescription([bool isHe = false]) {
+    if (birthDate == null) return '';
+    final now = DateTime.now();
+    final days = now.difference(birthDate!).inDays;
+    if (days < 0) return '';
+    if (days < 7) return isHe ? '$days ימים' : '$days days';
+    if (days < 30) return isHe ? '${days ~/ 7} שבועות' : '${days ~/ 7} weeks';
+    if (days < 365) return isHe ? '${days ~/ 30} חודשים' : '${days ~/ 30} months';
+    final years = days ~/ 365;
+    return isHe ? '$years שנים' : (years == 1 ? '1 year' : '$years years');
+  }
+
   factory BabyModel.fromJson(Map<String, dynamic> json) {
     return BabyModel(
       id: json['id'] as String,

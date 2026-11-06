@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../state/auth_state.dart';
 import '../../state/locale_state.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/google_account_sheet.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -47,6 +48,18 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _handleGoogleButton(bool isHe) async {
+    final auth = context.read<AuthState>();
+    final localeState = context.read<LocaleState>();
+    try {
+      await auth.signInWithGoogle(locale: localeState.locale);
+    } catch (e) {
+      if (mounted) {
+        await showGoogleAccountSheet(context);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = context.watch<LocaleState>().strings;
@@ -56,10 +69,30 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       appBar: AppBar(
         actions: [
-          TextButton.icon(
-            onPressed: () => localeState.toggle(),
-            icon: const Icon(Icons.language, size: 18),
-            label: Text(localeState.isHe ? 'English' : 'עברית'),
+          PopupMenuButton<String>(
+            tooltip: s.language,
+            onSelected: (lang) => localeState.setLocale(lang),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'he', child: Text('עברית')),
+              PopupMenuItem(value: 'en', child: Text('English')),
+              PopupMenuItem(value: 'es', child: Text('Español')),
+              PopupMenuItem(value: 'ru', child: Text('Русский')),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.language, size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    localeState.currentLanguageName,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                  const Icon(Icons.arrow_drop_down, size: 18),
+                ],
+              ),
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -149,6 +182,62 @@ class _LoginScreenState extends State<LoginScreen> {
                           )
                         : Text(s.login),
                   ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          localeState.isHe ? 'או' : 'OR',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textMuted),
+                        ),
+                      ),
+                      const Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF1F2937),
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      side: const BorderSide(color: Color(0xFFD1D5DB), width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: auth.isLoading ? null : () => _handleGoogleButton(localeState.isHe),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF1F5F9),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'G',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFFEA4335),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          localeState.isHe ? 'המשך עם Google / Gmail' : 'Continue with Google',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   TextButton(
                     onPressed: () {
@@ -158,6 +247,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       );
                     },
                     child: Text(s.noAccount),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'v0.1.4',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
                   ),
                 ],
               ),

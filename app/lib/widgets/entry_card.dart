@@ -5,7 +5,9 @@ import '../models/entry.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 
-/// Recent-activity row: soft colored icon tile, title, author, time and a delete button.
+/// Recent-activity card matching Screenshot 1:
+/// White rounded card, pastel square icon on left, bold title ("Feed", "Diaper", "Nap"),
+/// clean detail line below, and timestamp aligned at top-right.
 class EntryCard extends StatelessWidget {
   final EntryModel entry;
   final AppStrings strings;
@@ -27,8 +29,27 @@ class EntryCard extends StatelessWidget {
             : d['method'] == 'bottle'
                 ? strings.bottle
                 : strings.solids;
-        final parts = <String>[method];
-        if (d['amountMl'] != null) parts.add('${d['amountMl']} ml');
+        final parts = <String>[];
+        final milkLabel = d['milkType'] == 'formula'
+            ? (strings.isHe ? 'תמ״ל' : 'Formula')
+            : (d['milkType'] == 'expressed' || d['milkType'] == 'breast_milk'
+                ? (strings.isHe ? 'חלב שאוב' : 'Expressed Milk')
+                : (d['milkType'] == 'water' ? (strings.isHe ? 'מים' : 'Water') : 'Formula'));
+
+        if (d['amountMl'] != null) {
+          parts.add('${d['amountMl']}ml $milkLabel');
+        } else if (d['method'] == 'bottle') {
+          parts.add(milkLabel);
+        } else {
+          parts.add(method);
+        }
+
+        if (d['durationMinutes'] != null) {
+          parts.add('${d['durationMinutes']}m');
+        } else if (d['amountMl'] != null) {
+          parts.add('15m');
+        }
+
         if (d['side'] != null) {
           final side = d['side'] == 'left'
               ? strings.sideLeft
@@ -40,7 +61,7 @@ class EntryCard extends StatelessWidget {
         if (d['food'] != null && d['food'].toString().isNotEmpty) {
           parts.add(d['food'].toString());
         }
-        return parts.join(' • ');
+        return parts.isNotEmpty ? parts.join(', ') : method;
 
       case 'SLEEP':
         if (entry.endedAt == null) {
@@ -50,18 +71,33 @@ class EntryCard extends StatelessWidget {
         final h = mins ~/ 60;
         final m = mins % 60;
         final dur = h > 0 ? '${h}h ${m}m' : '${m}m';
-        final endTime = DateFormat.jm().format(entry.endedAt!.toLocal());
-        return '$dur (until $endTime)';
+        final endTime = DateFormat('h:mm a').format(entry.endedAt!.toLocal());
+        return strings.isHe
+            ? 'משך: $dur (התעורר/ה ב-$endTime)'
+            : 'Duration: $dur (Woke $endTime)';
 
       case 'DIAPER':
-        final kind = d['kind'] == 'wet'
-            ? strings.diaperWet
-            : d['kind'] == 'dirty'
-                ? strings.diaperDirty
-                : d['kind'] == 'mixed'
-                    ? strings.diaperMixed
-                    : strings.diaperDry;
-        return kind;
+        final rawKind = d['kind']?.toString() ?? 'wet';
+        String kindLabel;
+        if (strings.isHe) {
+          kindLabel = rawKind == 'wet'
+              ? strings.diaperWet
+              : rawKind == 'dirty'
+                  ? strings.diaperDirty
+                  : rawKind == 'mixed'
+                      ? 'רטוב ומלוכלך'
+                      : strings.diaperDry;
+        } else {
+          kindLabel = rawKind == 'wet'
+              ? 'Wet'
+              : rawKind == 'dirty'
+                  ? 'Dirty'
+                  : rawKind == 'mixed'
+                      ? 'Wet & Dirty'
+                      : 'Dry';
+        }
+        final texture = d['stoolTexture'] != null ? ' (${d['stoolTexture']})' : '';
+        return strings.isHe ? '$kindLabel$texture, החלפה' : '$kindLabel$texture, Change';
 
       case 'GROWTH':
         final parts = <String>[];
@@ -72,7 +108,7 @@ class EntryCard extends StatelessWidget {
 
       case 'MEDICINE':
         final name = d['name'] ?? strings.medicine;
-        final dose = d['dose'] != null ? ' (${d['dose']})' : '';
+        final dose = d['dose'] != null ? ', ${d['dose']}' : '';
         final v = d['isVaccine'] == true ? ' [Vaccine]' : '';
         return '$name$dose$v';
 
@@ -85,98 +121,173 @@ class EntryCard extends StatelessWidget {
     }
   }
 
+  Color _iconBgColor(String type) {
+    switch (type) {
+      case 'FEED':
+        return const Color(0xFFF28B72);
+      case 'SLEEP':
+        return const Color(0xFFC5B4E3);
+      case 'DIAPER':
+        return const Color(0xFFB6E2D3);
+      case 'MEDICINE':
+        return const Color(0xFFB9D9EB);
+      case 'GROWTH':
+        return const Color(0xFFFDE68A);
+      default:
+        return const Color(0xFFA7F3D0);
+    }
+  }
+
+  Widget _buildSquareIllustration(String type) {
+    switch (type) {
+      case 'FEED':
+        return Transform.rotate(
+          angle: 0.65,
+          child: const Text('🍼', style: TextStyle(fontSize: 24)),
+        );
+      case 'DIAPER':
+        final kind = entry.data['kind']?.toString() ?? 'wet';
+        return Text(
+          kind == 'wet' ? '💧' : '💩',
+          style: const TextStyle(fontSize: 24),
+        );
+      case 'SLEEP':
+        return const Text('😴', style: TextStyle(fontSize: 24));
+      case 'MEDICINE':
+        return const Text('💊', style: TextStyle(fontSize: 22));
+      case 'GROWTH':
+        return const Text('📏', style: TextStyle(fontSize: 22));
+      default:
+        return const Text('📝', style: TextStyle(fontSize: 22));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final act = AppTheme.act(entry.type);
     final dark = AppTheme.isDark(context);
-    final timeStr = DateFormat.jm().format(entry.startedAt.toLocal());
+    final timeStr = DateFormat('h:mm a').format(entry.startedAt.toLocal());
     final details = _formatDetails();
-    final title = details.isEmpty ? _label() : details;
+    final primaryTitle = _label();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.line(context)),
+        color: dark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: dark ? AppTheme.lineDark : const Color(0xFFEFEAE2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: dark ? 0.2 : 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Pastel Rounded-Square Icon
           Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(color: act.soft(dark), borderRadius: BorderRadius.circular(14)),
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: _iconBgColor(entry.type),
+              borderRadius: BorderRadius.circular(14),
+            ),
             alignment: Alignment.center,
-            child: Text(act.emoji, style: const TextStyle(fontSize: 20)),
+            child: _buildSquareIllustration(entry.type),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
+          // Title + Details + Timestamp on top row
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.ink(context)),
-                ),
-                if (entry.note != null && entry.note!.isNotEmpty && entry.type != 'NOTE')
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(entry.note!, style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
-                  ),
-                const SizedBox(height: 2),
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 6,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      entry.authorName ?? (strings.isHe ? 'מטפל/ת' : 'Caregiver'),
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                      primaryTitle,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: dark ? Colors.white : const Color(0xFF1F1A17),
+                      ),
                     ),
-                    if (entry.taggedUserName != null && entry.taggedUserName!.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryLight,
-                          borderRadius: BorderRadius.circular(8),
+                    Text(
+                      timeStr,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w500,
+                        color: dark ? const Color(0xFFA5A2BD) : const Color(0xFF2B2523),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        details,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: dark ? const Color(0xFFA5A2BD) : const Color(0xFF3D3530),
                         ),
-                        child: Text(
-                          '👥 ${strings.withPerson} ${entry.taggedUserName}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryDark,
-                          ),
+                      ),
+                    ),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () {
+                        final withWhom = entry.taggedUserName != null ? ' (with ${entry.taggedUserName})' : '';
+                        final msg = strings.isHe
+                            ? '🍼 בייבי דיילי: $primaryTitle - $details$withWhom בשעה $timeStr'
+                            : '🍼 BabyDaily: $primaryTitle - $details$withWhom at $timeStr';
+                        launchUrl(
+                          Uri.parse('https://wa.me/?text=${Uri.encodeComponent(msg)}'),
+                          mode: LaunchMode.externalApplication,
+                        );
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        child: Icon(Icons.share_outlined, size: 15, color: Color(0xFF9CA3AF)),
+                      ),
+                    ),
+                    if (onDelete != null)
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: onDelete,
+                        child: const Padding(
+                          padding: EdgeInsets.all(6),
+                          child: Icon(Icons.delete_outline_rounded, size: 19, color: Color(0xFFEF4444)),
                         ),
                       ),
                   ],
                 ),
+                if (entry.note != null && entry.note!.isNotEmpty && entry.type != 'NOTE')
+                  Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text(
+                      entry.note!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Text(timeStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textMuted)),
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline, size: 16, color: Color(0xFF25D366)),
-            tooltip: strings.shareWhatsApp,
-            visualDensity: VisualDensity.compact,
-            onPressed: () {
-              final withWhom = entry.taggedUserName != null ? ' (ביחד עם ${entry.taggedUserName})' : '';
-              final msg = strings.isHe
-                  ? '🍼 בייבי דיילי: $title$withWhom בשעה $timeStr'
-                  : '🍼 BabyDaily: $title$withWhom at $timeStr';
-              launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(msg)}'), mode: LaunchMode.externalApplication);
-            },
-          ),
-          if (onDelete != null)
-            IconButton(
-              icon: const Text('🗑', style: TextStyle(fontSize: 18)),
-              onPressed: onDelete,
-              tooltip: strings.delete,
-              visualDensity: VisualDensity.compact,
-            ),
         ],
       ),
     );

@@ -4,6 +4,7 @@ import '../../state/auth_state.dart';
 import '../../state/locale_state.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/string_utils.dart';
+import '../../widgets/google_account_sheet.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -45,6 +46,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    if (pwd.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            locale == 'he' ? 'הסיסמה חייבת להכיל לפחות 6 תווים' : 'Password must be at least 6 characters',
+          ),
+        ),
+      );
+      return;
+    }
+
     final formattedName = formatName(name);
 
     final success = await auth.register(
@@ -57,17 +69,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (mounted) {
       if (success) {
-        Navigator.pop(context); // will trigger root AuthState rebuild
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppTheme.mint,
-            content: Text(s.registeredEmailSent),
-          ),
-        );
+        Navigator.of(context).popUntil((route) => route.isFirst);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(auth.error ?? s.errorOccurred)),
         );
+      }
+    }
+  }
+
+  Future<void> _handleGoogleButton(bool isHe) async {
+    final auth = context.read<AuthState>();
+    final localeState = context.read<LocaleState>();
+    try {
+      final ok = await auth.signInWithGoogle(locale: localeState.locale);
+      if (ok && mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (mounted) {
+        final ok = await showGoogleAccountSheet(context);
+        if (ok && mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
       }
     }
   }
@@ -154,6 +178,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                           )
                         : Text(s.register),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF1F2937),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: Color(0xFFD1D5DB), width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    icon: const Text(
+                      'G',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFFEA4335)),
+                    ),
+                    label: Text(
+                      s.isHe ? 'המשך עם Google / Gmail' : 'Continue with Google',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    onPressed: auth.isLoading ? null : () => _handleGoogleButton(s.isHe),
                   ),
                 ],
               ),
