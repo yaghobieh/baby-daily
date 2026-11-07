@@ -192,6 +192,25 @@ class EntryState extends ChangeNotifier {
     final previous = List<EntryModel>.from(_entries);
     _entries.removeWhere((e) => e.id == entryId);
     _pinnedEntryIds.remove(entryId);
+    if (_summary.activeSleep?.id == entryId) {
+      _timer?.cancel();
+      _activeSleepDuration = Duration.zero;
+      _summary = DailySummaryModel(
+        feeds: _summary.feeds,
+        bottleMl: _summary.bottleMl,
+        breastMinutes: _summary.breastMinutes,
+        sleepMinutes: _summary.sleepMinutes,
+        diapersTotal: _summary.diapersTotal,
+        diapersWet: _summary.diapersWet,
+        diapersDirty: _summary.diapersDirty,
+        activeSleep: null,
+        lastFeed: _summary.lastFeed,
+        lastSleep: _summary.lastSleep,
+        lastDiaper: _summary.lastDiaper,
+        lastGrowth: _summary.lastGrowth,
+        lastMedicine: _summary.lastMedicine,
+      );
+    }
     _error = null;
     notifyListeners();
     await _savePinned();
@@ -203,6 +222,7 @@ class EntryState extends ChangeNotifier {
     } catch (e) {
       _entries = previous;
       _error = e.toString();
+      _checkSleepTimer();
       notifyListeners();
       return false;
     }

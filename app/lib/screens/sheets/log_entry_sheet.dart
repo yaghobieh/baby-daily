@@ -741,8 +741,8 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
                             Center(
                               child: Text(
                                 sleeping
-                                    ? (s.isHe ? 'ישן/ה עכשיו ✨' : 'SLEEPING NOW ✨')
-                                    : (s.isHe ? 'מוכן/ה לשינה ✨' : 'SLEEPING NOW ✨'),
+                                    ? (s.isHe ? 'ישנ/ה עכשיו ✨' : 'SLEEPING NOW ✨')
+                                    : (s.isHe ? 'מוכן/ה לשינה ✨' : 'READY FOR SLEEP ✨'),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w600,
@@ -761,7 +761,7 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
                                   ),
                                   children: [
                                     TextSpan(
-                                      text: sleeping ? h : '02',
+                                      text: sleeping ? h : '00',
                                       style: const TextStyle(fontSize: 48),
                                     ),
                                     const TextSpan(
@@ -769,7 +769,7 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
                                       style: TextStyle(fontSize: 32, fontWeight: FontWeight.w600),
                                     ),
                                     TextSpan(
-                                      text: sleeping ? m : '10',
+                                      text: sleeping ? m : '00',
                                       style: const TextStyle(fontSize: 48),
                                     ),
                                     const TextSpan(
@@ -777,7 +777,7 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
                                       style: TextStyle(fontSize: 32, fontWeight: FontWeight.w600),
                                     ),
                                     TextSpan(
-                                      text: sleeping ? sec : '15',
+                                      text: sleeping ? sec : '00',
                                       style: const TextStyle(fontSize: 48),
                                     ),
                                     const TextSpan(

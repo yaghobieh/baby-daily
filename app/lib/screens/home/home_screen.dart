@@ -128,16 +128,41 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _confirmDeleteEntry(BabyModel baby, EntryModel entry, AppStrings s) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final ok = await context.read<EntryState>().deleteEntry(baby.id, entry.id);
-    if (mounted) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(ok ? s.entryDeletedSuccess : s.errorOccurred),
-          backgroundColor: ok ? AppTheme.mint : AppTheme.danger,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(s.delete, style: const TextStyle(fontWeight: FontWeight.w800)),
+        content: Text(s.confirmDeleteEntryContent),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(s.cancel, style: const TextStyle(color: AppTheme.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.danger,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(s.delete, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final messenger = ScaffoldMessenger.of(context);
+      final ok = await context.read<EntryState>().deleteEntry(baby.id, entry.id);
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(ok ? s.entryDeletedSuccess : s.errorOccurred),
+            backgroundColor: ok ? AppTheme.mint : AppTheme.danger,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -409,77 +434,131 @@ class _HomeScreenState extends State<HomeScreen> {
     final sleeping = entryState.isSleeping;
     final dark = AppTheme.isDark(context);
 
-    String durationText = '1h 25m';
+    String durationText;
     if (sleeping) {
       final d = entryState.activeSleepDuration;
       final h = d.inHours;
       final m = d.inMinutes % 60;
       durationText = h > 0 ? '${h}h ${m}m' : '${m}m';
+    } else {
+      final lastSleepEnd = entryState.summary.lastSleep?.endedAt;
+      if (lastSleepEnd != null) {
+        final d = DateTime.now().difference(lastSleepEnd.toLocal());
+        final h = d.inHours;
+        final m = d.inMinutes % 60;
+        durationText = d.isNegative ? '0m' : (h > 0 ? '${h}h ${m}m' : '${m}m');
+      } else {
+        durationText = '—';
+      }
     }
+
+    final bannerBg = sleeping
+        ? (dark ? const Color(0xFF342B54) : const Color(0xFFCBC0EE))
+        : (dark ? const Color(0xFF233B2B) : const Color(0xFFD4EDDA));
+    final bannerIconColor = sleeping ? const Color(0xFF6B5B9E) : const Color(0xFF2E7D32);
+    final bannerTextColor = dark ? Colors.white : (sleeping ? const Color(0xFF1F1A24) : const Color(0xFF1B4332));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: dark ? const Color(0xFF342B54) : const Color(0xFFCBC0EE),
+        color: bannerBg,
         borderRadius: BorderRadius.circular(32),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.nightlight_round,
-            color: Color(0xFF6B5B9E),
+          Icon(
+            sleeping ? Icons.nightlight_round : Icons.wb_sunny_rounded,
+            color: bannerIconColor,
             size: 24,
           ),
           const SizedBox(width: 10),
           Text(
             sleeping
-                ? (s.isHe ? 'ישן/ה' : 'SLEEPING')
-                : (s.isHe ? 'שינה' : 'SLEEPING'),
+                ? (s.isHe ? 'ישנ/ה' : 'SLEEPING')
+                : (s.isHe ? 'ער/ה' : 'AWAKE'),
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.5,
-              color: dark ? Colors.white : const Color(0xFF1F1A24),
+              color: bannerTextColor,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              sleeping ? durationText : '1h 25m',
+              durationText,
               style: TextStyle(
                 fontSize: 21,
                 fontWeight: FontWeight.w900,
-                color: dark ? Colors.white : const Color(0xFF1F1A24),
+                color: bannerTextColor,
               ),
             ),
           ),
           InkWell(
             borderRadius: BorderRadius.circular(24),
-            onTap: () {
+            onTap: () async {
               if (sleeping) {
-                entryState.wakeUp(baby.id);
+                final messenger = ScaffoldMessenger.of(context);
+                final ok = await entryState.wakeUp(baby.id);
+                if (mounted && ok) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          const Icon(Icons.wb_sunny_rounded, color: Colors.white, size: 18),
+                          const SizedBox(width: 8),
+                          Text('${baby.name} ${s.wakeUp}!'),
+                        ],
+                      ),
+                      backgroundColor: AppTheme.mint,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
               } else {
-                LogEntrySheet.show(context, baby.id, 'SLEEP');
+                final messenger = ScaffoldMessenger.of(context);
+                final ok = await entryState.startSleep(baby.id);
+                if (mounted && ok) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          const Icon(Icons.nightlight_round, color: Colors.white, size: 18),
+                          const SizedBox(width: 8),
+                          Text(s.sleepAlertNotice),
+                        ],
+                      ),
+                      backgroundColor: const Color(0xFF8C7AE6),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
               }
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF6EFE2),
+                color: dark ? const Color(0xFF1F2937) : const Color(0xFFF6EFE2),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.access_alarm, size: 17, color: Color(0xFF2B2523)),
+                  Icon(
+                    sleeping ? Icons.wb_sunny_rounded : Icons.bedtime_rounded,
+                    size: 17,
+                    color: sleeping ? const Color(0xFFD97706) : const Color(0xFF8C7AE6),
+                  ),
                   const SizedBox(width: 6),
                   Text(
-                    sleeping ? (s.isHe ? 'העיר/י' : 'Wake') : (s.isHe ? 'העיר/י' : 'Wake'),
-                    style: const TextStyle(
+                    sleeping
+                        ? (s.isHe ? 'העיר/י' : 'Wake')
+                        : (s.isHe ? 'להרדים' : 'Sleep'),
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF2B2523),
+                      color: dark ? Colors.white : const Color(0xFF2B2523),
                     ),
                   ),
                 ],
@@ -676,7 +755,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   final isPinned = entryState.isPinned(e.id);
                   return Dismissible(
                     key: ValueKey('entry_${e.id}'),
-                    direction: DismissDirection.horizontal,
+                    direction: baby.canLog ? DismissDirection.horizontal : (isPinned ? DismissDirection.none : DismissDirection.endToStart),
                     confirmDismiss: (direction) async {
                       if (direction == DismissDirection.endToStart) {
                         // Swiped LEFT: Pin / Unpin
@@ -703,20 +782,47 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                         return false; // Do not dismiss widget
                       } else if (direction == DismissDirection.startToEnd) {
-                        // Swiped RIGHT: Delete
-                        final messenger = ScaffoldMessenger.of(context);
-                        final ok = await entryState.deleteEntry(baby.id, e.id);
-                        if (!mounted) return ok;
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(ok ? s.entryDeletedSuccess : s.errorOccurred),
-                            backgroundColor: ok ? AppTheme.mint : AppTheme.danger,
-                            duration: const Duration(seconds: 2),
+                        // Swiped RIGHT: Confirm Delete
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                            title: Text(s.delete, style: const TextStyle(fontWeight: FontWeight.w800)),
+                            content: Text(s.confirmDeleteEntryContent),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: Text(s.cancel, style: const TextStyle(color: AppTheme.textMuted)),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.danger,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: Text(s.delete, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              ),
+                            ],
                           ),
                         );
-                        return ok;
+                        return confirmed == true;
                       }
                       return false;
+                    },
+                    onDismissed: (direction) async {
+                      if (direction == DismissDirection.startToEnd) {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final ok = await entryState.deleteEntry(baby.id, e.id);
+                        if (mounted) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(ok ? s.entryDeletedSuccess : s.errorOccurred),
+                              backgroundColor: ok ? AppTheme.mint : AppTheme.danger,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
                     },
                     // Swiping RIGHT (startToEnd) -> Delete
                     background: Container(
