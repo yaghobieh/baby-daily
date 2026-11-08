@@ -10,33 +10,35 @@ export const EntryTypeEnum = z.enum(['FEED', 'SLEEP', 'DIAPER', 'GROWTH', 'MEDIC
 // ---------- Auth ----------
 export const RegisterBody = z.object({
   name: z.string().trim().min(1).max(80).transform(formatName),
-  email: z.email().max(200),
+  email: z.string().trim().email().max(200),
   password: z.string().min(6).max(200),
   phone: z.string().trim().max(30).optional().nullable(),
-  locale: z.enum(['en', 'he']).optional(),
+  locale: z.string().optional(),
   utcOffset: z.number().int().min(-840).max(840).optional(),
 });
 
 export const LoginBody = z.object({
   /** Email or phone number */
-  identifier: z.string().trim().min(3).max(200),
+  identifier: z.string().trim().min(1).max(200).optional(),
+  email: z.string().trim().min(1).max(200).optional(),
+  phone: z.string().trim().min(1).max(200).optional(),
   password: z.string().min(1).max(200),
   utcOffset: z.number().int().min(-840).max(840).optional(),
 });
 
 export const GoogleAuthBody = z.object({
-  email: z.email().max(200).optional(),
+  email: z.string().trim().email().max(200).optional().or(z.literal('')),
   name: z.string().trim().min(1).max(80).optional(),
   idToken: z.string().optional(),
   accessToken: z.string().optional(),
-  locale: z.enum(['en', 'he']).optional(),
+  locale: z.string().optional(),
   utcOffset: z.number().int().min(-840).max(840).optional(),
 });
 
 export const UpdateMeBody = z.object({
   name: z.string().trim().min(1).max(80).transform(formatName).optional(),
   phone: z.string().trim().max(30).nullable().optional(),
-  locale: z.enum(['en', 'he']).optional(),
+  locale: z.string().optional(),
   utcOffset: z.number().int().min(-840).max(840).optional(),
 });
 

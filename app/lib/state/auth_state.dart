@@ -116,27 +116,47 @@ class AuthState extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
+    final cleanLocale = locale.length >= 2 ? locale.substring(0, 2) : 'en';
+
     try {
-      final googleSignIn = GoogleSignIn(
-        scopes: ['email', 'profile'],
-        clientId: kIsWeb ? _googleClientId : null,
-        serverClientId: !kIsWeb ? _googleClientId : null,
-      );
-      final account = await googleSignIn.signIn();
+      GoogleSignInAccount? account;
+
+      // 1. First attempt with serverClientId
+      try {
+        final googleSignIn = GoogleSignIn(
+          scopes: ['email', 'profile'],
+          clientId: kIsWeb ? _googleClientId : null,
+          serverClientId: !kIsWeb ? _googleClientId : null,
+        );
+        account = await googleSignIn.signIn();
+      } catch (_) {
+        // Fallback without serverClientId in case SHA-1 or server client is not recognized
+        try {
+          final fallbackSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+          account = await fallbackSignIn.signIn();
+        } catch (_) {
+          account = null;
+        }
+      }
+
       if (account == null) {
         _isLoading = false;
         notifyListeners();
         return false;
       }
 
-      final googleAuth = await account.authentication;
+      GoogleSignInAuthentication? googleAuth;
+      try {
+        googleAuth = await account.authentication;
+      } catch (_) {}
+
       final res = await api.post('/auth/google', {
         'email': account.email,
         if (account.displayName != null && account.displayName!.isNotEmpty)
           'name': account.displayName,
-        if (googleAuth.idToken != null) 'idToken': googleAuth.idToken,
-        if (googleAuth.accessToken != null) 'accessToken': googleAuth.accessToken,
-        'locale': locale,
+        if (googleAuth?.idToken != null) 'idToken': googleAuth!.idToken,
+        if (googleAuth?.accessToken != null) 'accessToken': googleAuth!.accessToken,
+        'locale': cleanLocale,
         'utcOffset': DateTime.now().timeZoneOffset.inMinutes,
       });
 
@@ -152,7 +172,7 @@ class AuthState extends ChangeNotifier {
       _isLoading = false;
       _error = e.toString();
       notifyListeners();
-      rethrow;
+      return false;
     }
   }
 
@@ -165,11 +185,13 @@ class AuthState extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
+    final cleanLocale = locale.length >= 2 ? locale.substring(0, 2) : 'en';
+
     try {
       final res = await api.post('/auth/google', {
-        'email': email,
-        if (name != null && name.isNotEmpty) 'name': name,
-        'locale': locale,
+        'email': email.trim().toLowerCase(),
+        if (name != null && name.isNotEmpty) 'name': name.trim(),
+        'locale': cleanLocale,
         'utcOffset': DateTime.now().timeZoneOffset.inMinutes,
       });
 

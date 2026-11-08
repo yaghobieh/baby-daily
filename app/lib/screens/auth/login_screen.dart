@@ -52,10 +52,17 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.read<AuthState>();
     final localeState = context.read<LocaleState>();
     try {
-      await auth.signInWithGoogle(locale: localeState.locale);
-    } catch (e) {
-      if (mounted) {
-        await showGoogleAccountSheet(context);
+      final ok = await auth.signInWithGoogle(locale: localeState.locale);
+      if (ok && mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        return;
+      }
+    } catch (_) {}
+
+    if (mounted) {
+      final ok = await showGoogleAccountSheet(context);
+      if (ok && mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     }
   }

@@ -116,10 +116,12 @@ export default async function authRoutes(app: FastifyInstance) {
 
   app.post('/auth/login', async (req) => {
     const b = LoginBody.parse(req.body);
-    const isEmail = b.identifier.includes('@');
+    const id = b.identifier || b.email || b.phone;
+    if (!id) throw badRequest('identifier_required', 'Email or phone number is required');
+    const isEmail = id.includes('@');
     const user = isEmail
-      ? await prisma.user.findUnique({ where: { email: normalizeEmail(b.identifier)! } })
-      : await prisma.user.findUnique({ where: { phoneKey: phoneKey(b.identifier) ?? '__none__' } });
+      ? await prisma.user.findUnique({ where: { email: normalizeEmail(id)! } })
+      : await prisma.user.findUnique({ where: { phoneKey: phoneKey(id) ?? '__none__' } });
 
     if (!user || !(await bcrypt.compare(b.password, user.passwordHash))) throw unauthorized('invalid_credentials');
 
@@ -206,6 +208,8 @@ export default async function authRoutes(app: FastifyInstance) {
     const email = normalizeEmail(rawEmail);
     if (!email) throw badRequest('email_required');
 
+    const userLocale = (b.locale ?? 'en').slice(0, 2);
+
     let user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       const defaultName = googleName || email.split('@')[0] || 'Parent';
@@ -214,7 +218,7 @@ export default async function authRoutes(app: FastifyInstance) {
           name: defaultName,
           email,
           passwordHash: await bcrypt.hash(`google_${Date.now()}_${Math.random()}`, 11),
-          locale: b.locale ?? 'en',
+          locale: userLocale,
           utcOffset: b.utcOffset ?? 0,
         },
       });
