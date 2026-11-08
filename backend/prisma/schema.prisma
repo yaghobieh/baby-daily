@@ -51,6 +51,13 @@ model User {
   locale       String   @default("en")
   /// Minutes offset from UTC reported by the user's device (for quiet hours).
   utcOffset    Int      @default(0)
+  /// Subscription & AI usage state
+  isPremium         Boolean   @default(false)
+  subscriptionPlan  String    @default("FREE") // "FREE" | "MONTHLY" | "YEARLY" | "LIFETIME"
+  subscriptionSince DateTime?
+  aiQueriesToday    Int       @default(0)
+  aiLastQueryDate   String?
+  dailySummaryEmail Boolean   @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

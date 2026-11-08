@@ -1,3 +1,19 @@
+## Current Release (v0.1.7+8) — AI Routine Advisor & Premium Tier
+
+- **DeepSeek AI Routine Assistant**: Live sleep sweet-spot nap advisor, wake window predictions, feeding interval advice, and interactive in-app & web Q&A based on the baby's actual routine logs.
+- **Automated AI Daily Summary**: Generates a warm 24h recap with pediatric sleep/feeding tips, sent to user push notifications and branded email.
+- **7-Day Routine Trends & Statistics**: Multi-day metrics for feeds, bottle volume (ml), nursing minutes, total sleep hours, and wet/dirty diaper totals.
+- **BabyDaily Premium Monetization**:
+  - **Free Tier**: 3 AI questions/day + unlimited feeding, sleep & diaper logging + family synchronization.
+  - **Monthly Care**: \$4.99 / month (flexible cancellation).
+  - **Annual Family Plan**: \$39.99 / year (\$3.33/mo, 7-day free trial, save 33%).
+  - **Lifetime Family Pass**: \$69.99 one-time payment for all children and caregivers forever.
+- **Web Portal & Web App Sync**:
+  - Live at `https://www.babydaily.app/dashboard` and `https://baby-daily-portal.vercel.app/dashboard`.
+  - Parents can sign in with the same account they use in the mobile app, manage live sleep/wake status, log routines with 1 click, view AI insights, and review weekly trends.
+
+---
+
 # BabyDaily — Release & Deployment Guide
 
 This guide covers building and releasing BabyDaily for Web, Google Play Store (Android), and Apple App Store (iOS), as well as deploying the backend to Vercel.
@@ -24,6 +40,7 @@ The backend Fastify/Prisma application is configured for Vercel Serverless Funct
 ### Step 1: Link & Add Environment Variables
 From the `backend` directory:
 ```bash
+
 cd backend
 npx vercel link
 ```

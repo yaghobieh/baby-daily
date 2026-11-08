@@ -4,6 +4,11 @@ class UserModel {
   final String? phone;
   final String name;
   final String locale;
+  final bool isPremium;
+  final String subscriptionPlan;
+  final int aiQueriesToday;
+  final int aiDailyLimit;
+  final bool dailySummaryEmail;
   final DateTime? createdAt;
 
   UserModel({
@@ -12,6 +17,11 @@ class UserModel {
     this.phone,
     required this.name,
     required this.locale,
+    this.isPremium = false,
+    this.subscriptionPlan = 'FREE',
+    this.aiQueriesToday = 0,
+    this.aiDailyLimit = 3,
+    this.dailySummaryEmail = true,
     this.createdAt,
   });
 
@@ -22,6 +32,11 @@ class UserModel {
       phone: json['phone'] as String?,
       name: json['name'] as String,
       locale: json['locale'] as String? ?? 'en',
+      isPremium: json['isPremium'] as bool? ?? false,
+      subscriptionPlan: json['subscriptionPlan'] as String? ?? 'FREE',
+      aiQueriesToday: json['aiQueriesToday'] as int? ?? 0,
+      aiDailyLimit: json['aiDailyLimit'] as int? ?? 3,
+      dailySummaryEmail: json['dailySummaryEmail'] as bool? ?? true,
       createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'] as String) : null,
     );
   }
@@ -32,5 +47,10 @@ class UserModel {
     'phone': phone,
     'name': name,
     'locale': locale,
+    'isPremium': isPremium,
+    'subscriptionPlan': subscriptionPlan,
+    'aiQueriesToday': aiQueriesToday,
+    'aiDailyLimit': aiDailyLimit,
+    'dailySummaryEmail': dailySummaryEmail,
   };
 }

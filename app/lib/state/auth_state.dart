@@ -189,6 +189,33 @@ class AuthState extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshUser() async {
+    try {
+      if (api.isAuthenticated) {
+        final res = await api.get('/me');
+        _user = UserModel.fromJson(res as Map<String, dynamic>);
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  Future<bool> updateSubscription(String plan) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final res = await api.post('/me/subscription', {'plan': plan});
+      _user = UserModel.fromJson(res as Map<String, dynamic>);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     try {
       if (!kIsWeb || _googleClientId.isNotEmpty) {

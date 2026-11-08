@@ -16,6 +16,8 @@ const EnvSchema = z.object({
   EMAIL_FROM: z.string().default('BabyDaily <onboarding@resend.dev>'),
   /** Shared secret for the Vercel cron endpoint. */
   CRON_SECRET: z.string().optional().default(''),
+  /** DeepSeek API Key for BabyDaily AI Assistant & Insights */
+  DEEPSEEK_API_KEY: z.string().default('sk-8d450968263e4522b135a60869c89a64'),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

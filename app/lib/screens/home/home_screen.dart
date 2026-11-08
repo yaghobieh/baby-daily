@@ -25,6 +25,7 @@ import '../reminders/reminders_screen.dart';
 import '../settings/settings_screen.dart';
 import '../sharing/sharing_screen.dart';
 import '../sheets/log_entry_sheet.dart';
+import '../ai/ai_advisor_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -583,6 +584,9 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             // Lavender Sleeping Banner matching Screenshot 1
             _buildStatusBanner(baby, entryState, s),
+
+            // AI Advisor Card (Nap window predictions, DeepSeek assistant, 7-day stats)
+            AiAdvisorCard(babyId: baby.id, babyName: baby.name),
 
             // "Quick Action" Header
             Text(

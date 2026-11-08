@@ -9,6 +9,7 @@ import '../../state/locale_state.dart';
 import '../../state/theme_state.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/phone_alarm.dart';
+import '../ai/premium_sheet.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -343,6 +344,159 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
+
+          const SizedBox(height: 14),
+
+          // BabyDaily Premium Subscription Card
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFFF7F5), Color(0xFFF7F5FE)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFFFD5D5)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF7A7A),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text('✨', style: TextStyle(fontSize: 22)),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            user?.isPremium == true ? 'BabyDaily Premium' : 'Free Tier',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF2D3142),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: user?.isPremium == true
+                                  ? const Color(0xFF8C7AE6)
+                                  : const Color(0xFFFFE0E0),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              user?.isPremium == true ? (user?.subscriptionPlan ?? 'ACTIVE') : '3 AI USES/DAY',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                color: user?.isPremium == true ? Colors.white : const Color(0xFFFF7A7A),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        user?.isPremium == true
+                            ? (localeState.isHe
+                                ? 'מנוי פעיל: שאלות AI ללא הגבלה, דוחות וסיכום למייל.'
+                                : 'Active pass: Unlimited AI, 7-day stats & daily email digest.')
+                            : (localeState.isHe
+                                ? 'שדרג/י ב-\$4.99 לחודש לשאלות AI ללא הגבלה ודוחות.'
+                                : 'Upgrade for \$4.99/mo for unlimited AI & weekly trends.'),
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF71788E)),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF7A7A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    elevation: 0,
+                  ),
+                  onPressed: () => PremiumSheet.show(context),
+                  child: Text(
+                    user?.isPremium == true
+                        ? (localeState.isHe ? 'ניהול' : 'Manage')
+                        : (localeState.isHe ? 'שדרג/י' : 'Upgrade'),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // Official Website & Web Dashboard
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () {
+              launchUrl(
+                Uri.parse('https://www.babydaily.app/dashboard'),
+                mode: LaunchMode.externalApplication,
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: line),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF8FF),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.language_rounded, color: Color(0xFF3897F0), size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              localeState.isHe ? 'פורטל אינטרנט ואתר' : 'Web Portal & Dashboard',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: ink),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.open_in_new_rounded, size: 14, color: AppTheme.textMuted),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'babydaily.app/dashboard',
+                          style: TextStyle(fontSize: 12.5, color: Color(0xFF3897F0), fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
 
           const SizedBox(height: 18),
 
