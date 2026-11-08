@@ -55,6 +55,10 @@ export async function buildApp() {
     return reply.code(500).send({ error: 'internal_error', message: 'Something went wrong' });
   });
 
+  app.get('/', async () => {
+    return { ok: true, app: 'BabyDaily API', status: 'online', time: new Date().toISOString() };
+  });
+
   app.get('/health', async () => {
     await prisma.$queryRaw`SELECT 1`;
     return { ok: true, time: new Date().toISOString() };
@@ -125,3 +129,5 @@ export async function buildApp() {
   await app.ready();
   return app;
 }
+
+export default buildApp;
