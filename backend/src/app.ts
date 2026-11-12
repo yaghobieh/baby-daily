@@ -12,6 +12,7 @@ import babyRoutes from './routes/babies.js';
 import sharingRoutes from './routes/sharing.js';
 import miscRoutes from './routes/misc.js';
 import aiRoutes from './routes/ai.js';
+import v120Routes from './routes/v120.js';
 import { initPush } from './services/notify.js';
 import { tick } from './services/scheduler.js';
 
@@ -114,6 +115,7 @@ export async function buildApp() {
   await app.register(sharingRoutes);
   await app.register(miscRoutes);
   await app.register(aiRoutes);
+  await app.register(v120Routes);
 
 
   // Reminder engine for serverless hosting (Vercel Cron calls this; locally a timer runs instead).

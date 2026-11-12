@@ -64,18 +64,30 @@ export const TestNotifyBody = z.object({
 export const EntryData = {
   FEED: z
     .object({
-      method: z.enum(['breast', 'bottle', 'solids']),
+      method: z.enum(['breast', 'bottle', 'solids', 'pump']).optional(),
+      kind: z.enum(['breast', 'bottle', 'solids', 'pump']).optional(),
       side: z.enum(['left', 'right', 'both']).optional(),
       amountMl: z.number().min(0).max(1000).optional(),
+      leftMl: z.number().min(0).max(500).optional(),
+      rightMl: z.number().min(0).max(500).optional(),
+      storageLocation: z.enum(['fridge', 'freezer', 'fed_immediately']).optional(),
+      consumedAt: z.string().nullable().optional(),
       milkType: z.string().max(60).optional(),
       durationMinutes: z.number().min(0).max(600).optional(),
+      durationMin: z.number().min(0).max(600).optional(),
       food: z.string().max(200).optional(),
+      foodCategory: z.enum(['fruit', 'vegetable', 'protein', 'grain', 'dairy', 'other']).optional(),
+      isAllergen: z.boolean().optional(),
+      allergenName: z.string().max(60).optional(),
+      preference: z.enum(['loved', 'neutral', 'disliked']).optional(),
+      texture: z.enum(['puree', 'mashed', 'finger_food']).optional(),
+      reaction: z.enum(['none', 'mild_rash', 'hives', 'tummy_upset']).optional(),
     })
     .passthrough(),
   SLEEP: z.object({}).passthrough(),
   DIAPER: z
     .object({
-      kind: z.enum(['wet', 'dirty', 'mixed', 'dry']),
+      kind: z.enum(['wet', 'dirty', 'mixed', 'both', 'dry']),
       stoolTexture: z.string().max(60).optional(),
     })
     .passthrough(),
@@ -86,12 +98,27 @@ export const EntryData = {
       headCm: z.number().min(0).max(100).optional(),
     })
     .refine((d) => d.weightKg != null || d.heightCm != null || d.headCm != null, 'At least one measurement'),
-  MEDICINE: z.object({
-    name: z.string().trim().min(1).max(100),
-    dose: z.string().max(60).optional(),
-    isVaccine: z.boolean().optional(),
-  }),
-  NOTE: z.object({ mood: z.enum(['happy', 'calm', 'fussy', 'crying', 'sick']).optional() }),
+  MEDICINE: z
+    .object({
+      name: z.string().trim().min(1).max(100),
+      dose: z.string().max(60).optional(),
+      isVaccine: z.boolean().optional(),
+      vaccineCode: z.string().max(40).optional(),
+    })
+    .passthrough(),
+  NOTE: z
+    .object({
+      mood: z.enum(['happy', 'calm', 'fussy', 'crying', 'sick']).optional(),
+      text: z.string().max(1000).optional(),
+      subType: z.enum(['note', 'activity', 'milestone']).optional(),
+      activityKind: z.enum(['tummy_time', 'bath', 'walk', 'skin_to_skin', 'story_time']).optional(),
+      durationMinutes: z.number().min(0).max(600).optional(),
+      milestoneKey: z.string().max(80).optional(),
+      milestoneTitle: z.string().max(160).optional(),
+      milestoneCategory: z.enum(['motor', 'social', 'language', 'cognitive']).optional(),
+      pinned: z.boolean().optional(),
+    })
+    .passthrough(),
 } as const;
 
 export const EntryBody = z.object({
