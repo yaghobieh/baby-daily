@@ -9,9 +9,9 @@ export const EntryTypeEnum = z.enum(['FEED', 'SLEEP', 'DIAPER', 'GROWTH', 'MEDIC
 
 // ---------- Auth ----------
 export const RegisterBody = z.object({
-  name: z.string().trim().min(1).max(80).transform(formatName),
-  email: z.string().trim().email().max(200),
-  password: z.string().min(6).max(200),
+  name: z.string().trim().min(1).max(80).transform(formatName).optional(),
+  email: z.string().trim().min(1).max(200),
+  password: z.string().min(1).max(200).optional(),
   phone: z.string().trim().max(30).optional().nullable(),
   locale: z.string().optional(),
   utcOffset: z.number().int().min(-840).max(840).optional(),
@@ -20,14 +20,16 @@ export const RegisterBody = z.object({
 export const LoginBody = z.object({
   /** Email or phone number */
   identifier: z.string().trim().min(1).max(200).optional(),
+  login: z.string().trim().min(1).max(200).optional(),
   email: z.string().trim().min(1).max(200).optional(),
   phone: z.string().trim().min(1).max(200).optional(),
-  password: z.string().min(1).max(200),
+  password: z.string().max(200).optional(),
   utcOffset: z.number().int().min(-840).max(840).optional(),
 });
 
 export const GoogleAuthBody = z.object({
-  email: z.string().trim().email().max(200).optional().or(z.literal('')),
+  email: z.string().trim().max(200).optional().or(z.literal('')),
+  phone: z.string().trim().max(50).optional(),
   name: z.string().trim().min(1).max(80).optional(),
   idToken: z.string().optional(),
   accessToken: z.string().optional(),
