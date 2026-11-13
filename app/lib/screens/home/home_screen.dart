@@ -26,6 +26,7 @@ import '../settings/settings_screen.dart';
 import '../sharing/sharing_screen.dart';
 import '../sheets/log_entry_sheet.dart';
 import '../ai/ai_advisor_card.dart';
+import '../ai/v120_suite_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -587,6 +588,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // AI Advisor Card (Nap window predictions, DeepSeek assistant, 7-day stats)
             AiAdvisorCard(babyId: baby.id, babyName: baby.name),
+
+            // v1.2.0 Holistic Parenting Suite (AI Voice/NL, Milk Stash, 100 Foods, Tummy/CDC, WHO, White Noise, Handoff)
+            V120SuiteCard(babyId: baby.id, babyName: baby.name),
 
             // "Quick Action" Header
             Text(

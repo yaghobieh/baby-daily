@@ -33,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final id = _identifierController.text.trim();
     final pwd = _passwordController.text;
 
-    if (id.isEmpty || pwd.isEmpty) {
+    if (id.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(s.emailOrPhone)),
       );
@@ -245,6 +245,30 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8C7AE6),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: auth.isLoading
+                        ? null
+                        : () async {
+                            final ok = await auth.login('054-4481412', '123456');
+                            if (ok && mounted) {
+                              Navigator.of(context).popUntil((route) => route.isFirst);
+                            }
+                          },
+                    icon: const Icon(Icons.bolt_rounded, size: 20),
+                    label: Text(
+                      localeState.isHe
+                          ? 'חיבור מהיר בקליק (054-4481412 • פרימיום)'
+                          : '⚡ 1-Click Connect (054-4481412 • Premium)',
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   TextButton(
                     onPressed: () {
@@ -257,7 +281,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'v0.1.4',
+                    'v1.2.0',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
                   ),
